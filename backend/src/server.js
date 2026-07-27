@@ -1,3 +1,4 @@
+dotenv.config();
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
@@ -16,7 +17,6 @@ import webhookRoutes from "./routes/webhookRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
 import { handleRazorpayWebhook } from "./controllers/paymentController.js";
 
-dotenv.config();
 
 const app = express();
 
