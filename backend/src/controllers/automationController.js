@@ -1,0 +1,94 @@
+import Automation from "../models/Automation.js";
+import InstagramAccount from "../models/InstagramAccount.js";
+import { getPlanLimits } from "../config/planLimits.js";
+
+// GET /api/automations
+export async function listAutomations(req, res) {
+  const automations = await Automation.find({ user: req.user._id }).sort({ createdAt: -1 });
+  res.json({ automations });
+}
+
+// GET /api/automations/:id
+export async function getAutomation(req, res) {
+  const automation = await Automation.findOne({ _id: req.params.id, user: req.user._id });
+  if (!automation) return res.status(404).json({ error: "Automation not found" });
+  res.json({ automation });
+}
+
+// POST /api/automations
+export async function createAutomation(req, res) {
+  const { instagramAccountId, name, trigger, keywordMatch, publicReply, followGate, dmReply } =
+    req.body;
+
+  const account = await InstagramAccount.findOne({
+    _id: instagramAccountId,
+    user: req.user._id,
+    isActive: true,
+  });
+  if (!account) return res.status(404).json({ error: "Instagram account not found" });
+
+  const limits = getPlanLimits(req.user.plan);
+
+  if (publicReply?.enabled && !limits.features.publicReply) {
+    return res.status(403).json({ error: "Public reply requires a paid plan", code: "PLAN_FEATURE_LOCKED" });
+  }
+  if (followGate?.enabled && !limits.features.followGate) {
+    return res.status(403).json({ error: "Follow-gating requires a paid plan", code: "PLAN_FEATURE_LOCKED" });
+  }
+
+  const automation = await Automation.create({
+    user: req.user._id,
+    instagramAccount: account._id,
+    name,
+    trigger,
+    keywordMatch,
+    publicReply,
+    followGate,
+    dmReply,
+    status: "draft",
+  });
+
+  res.status(201).json({ automation });
+}
+
+// PUT /api/automations/:id
+export async function updateAutomation(req, res) {
+  const allowedFields = [
+    "name",
+    "status",
+    "trigger",
+    "keywordMatch",
+    "publicReply",
+    "followGate",
+    "dmReply",
+  ];
+  const updates = {};
+  for (const field of allowedFields) {
+    if (req.body[field] !== undefined) updates[field] = req.body[field];
+  }
+
+  const automation = await Automation.findOneAndUpdate(
+    { _id: req.params.id, user: req.user._id },
+    updates,
+    { new: true, runValidators: true }
+  );
+  if (!automation) return res.status(404).json({ error: "Automation not found" });
+  res.json({ automation });
+}
+
+// DELETE /api/automations/:id
+export async function deleteAutomation(req, res) {
+  const result = await Automation.findOneAndDelete({ _id: req.params.id, user: req.user._id });
+  if (!result) return res.status(404).json({ error: "Automation not found" });
+  res.json({ success: true });
+}
+
+// PATCH /api/automations/:id/toggle — quick live/paused switch
+export async function toggleAutomation(req, res) {
+  const automation = await Automation.findOne({ _id: req.params.id, user: req.user._id });
+  if (!automation) return res.status(404).json({ error: "Automation not found" });
+
+  automation.status = automation.status === "live" ? "paused" : "live";
+  await automation.save();
+  res.json({ automation });
+}
