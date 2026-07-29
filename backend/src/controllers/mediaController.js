@@ -9,18 +9,12 @@ export async function listMedia(req, res) {
     user: req.user._id,
     isActive: true,
   }).select("+accessTokenEncrypted");
-  const token = decrypt(account.accessTokenEncrypted);
-
-console.log({
- tokenLength: token.length,
- tokenStart: token.substring(0,15)
-});
 
   if (!account) return res.status(404).json({ error: "Instagram account not found" });
 
   try {
     const token = decrypt(account.accessTokenEncrypted);
-    const media = await getRecentMedia(token, account.igBusinessId);
+    const media = await getRecentMedia(token);
     res.json({ media });
   } catch (err) {
     console.error("Media fetch error:", err.response?.data || err.message);
