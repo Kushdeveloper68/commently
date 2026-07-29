@@ -44,8 +44,6 @@ export async function handleCallback(req, res) {
     pendingStates.delete(state);
 
     const shortLived = await exchangeCodeForToken(code);
-    console.log("✅ SHORT", shortLived);
-
     // TEMP TEST: exchange skip, seedha short token se profile fetch try kar
     const profile = await getInstagramProfile(shortLived.access_token);
     console.log("✅ PROFILE", profile);

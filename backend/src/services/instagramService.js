@@ -46,11 +46,6 @@ export async function exchangeForLongLivedToken(shortLivedToken) {
     });
     return data;
   } catch (err) {
-    console.error("🔴 LONG-LIVED EXCHANGE FAILED");
-    console.error("URL hit:", err.config?.url);
-    console.error("Params sent:", err.config?.params);
-    console.error("Status:", err.response?.status);
-    console.error("Full error:", err.response?.data || err.message);
     throw err;
   }
 }
@@ -73,7 +68,6 @@ export async function getInstagramProfile(accessToken) {
       access_token: accessToken,
     },
   });
-  console.log(data)
   return data;
 }
 
