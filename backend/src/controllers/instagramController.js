@@ -42,7 +42,11 @@ export async function handleCallback(req, res) {
     const profile = await getInstagramProfile(longLived.access_token);
 
     const expiresAt = new Date(Date.now() + longLived.expires_in * 1000);
+console.log("SHORT", shortLived);
 
+console.log("LONG", longLived);
+
+console.log("PROFILE", profile);
     await InstagramAccount.findOneAndUpdate(
       { igBusinessId: profile.id },
       {

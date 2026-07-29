@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const GRAPH_BASE = "https://graph.instagram.com/v21.0";
+const GRAPH_BASE = "https://graph.instagram.com/v23.0";
 const IG_OAUTH_BASE = "https://api.instagram.com/oauth";
 
 // Step 1: Build the URL the frontend redirects the user to for Instagram login
@@ -58,7 +58,10 @@ export async function refreshLongLivedToken(currentToken) {
 
 export async function getInstagramProfile(accessToken) {
   const { data } = await axios.get(`${GRAPH_BASE}/me`, {
-    params: { fields: "id,username,profile_picture_url", access_token: accessToken },
+    params: {
+      fields: "id,username,profile_picture_url",
+      access_token: accessToken,
+    },
   });
   return data;
 }
@@ -75,17 +78,44 @@ export async function getRecentMedia(accessToken, igBusinessId, limit = 12) {
 }
 
 export async function sendPrivateReply(accessToken, commentId, message) {
-  const url = `${GRAPH_BASE}/${commentId}/private_replies`;
-  const { data } = await axios.post(url, null, {
-    params: { message, access_token: accessToken },
-  });
+  const url = `${GRAPH_BASE}/me/messages`;
+
+  const { data } = await axios.post(
+    url,
+    {
+      recipient: {
+        comment_id: commentId,
+      },
+      message: {
+        text: message,
+      },
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+    },
+  );
+
   return data;
 }
 
 export async function sendPublicReply(accessToken, commentId, message) {
   const url = `${GRAPH_BASE}/${commentId}/replies`;
-  const { data } = await axios.post(url, null, {
-    params: { message, access_token: accessToken },
-  });
+
+  const { data } = await axios.post(
+    url,
+    {
+      message,
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+    },
+  );
+
   return data;
 }

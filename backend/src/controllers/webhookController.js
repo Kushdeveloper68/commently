@@ -53,7 +53,10 @@ async function processComment(igBusinessId, value) {
   const account = await InstagramAccount.findOne({ igBusinessId, isActive: true }).select(
     "+accessTokenEncrypted"
   );
-  if (!account) return;
+  if (!account) {
+  console.log("❌ Instagram account not found:", igBusinessId);
+  return;
+}
 
   const user = await User.findById(account.user);
   if (!user) return;
