@@ -6,6 +6,7 @@ import {
   exchangeCodeForToken,
   exchangeForLongLivedToken,
   getInstagramProfile,
+  subscribeAccountToWebhooks
 } from "../services/instagramService.js";
 
 // In-memory state store for CSRF protection during OAuth (swap for Redis in
@@ -15,7 +16,10 @@ const pendingStates = new Map();
 // GET /api/instagram/connect — returns the URL the frontend should redirect to
 export function initiateConnect(req, res) {
   const state = crypto.randomBytes(16).toString("hex");
-  pendingStates.set(state, { userId: req.user._id.toString(), createdAt: Date.now() });
+  pendingStates.set(state, {
+    userId: req.user._id.toString(),
+    createdAt: Date.now(),
+  });
 
   // Clean up stale states older than 10 minutes
   for (const [key, val] of pendingStates) {
@@ -33,46 +37,52 @@ export async function handleCallback(req, res) {
   try {
     const pending = pendingStates.get(state);
     if (!pending) {
-      return res.redirect(`${frontendUrl}/connect-instagram?error=invalid_state`);
+      return res.redirect(
+        `${frontendUrl}/connect-instagram?error=invalid_state`,
+      );
     }
     pendingStates.delete(state);
 
     const shortLived = await exchangeCodeForToken(code);
-    const longLived = await exchangeForLongLivedToken(shortLived.access_token);
-    const profile = await getInstagramProfile(longLived.access_token);
+    console.log("✅ SHORT", shortLived);
 
-    const expiresAt = new Date(Date.now() + longLived.expires_in * 1000);
-console.log("SHORT", shortLived);
+    // TEMP TEST: exchange skip, seedha short token se profile fetch try kar
+    const profile = await getInstagramProfile(shortLived.access_token);
+    console.log("✅ PROFILE", profile);
 
-console.log("LONG", longLived);
+    await subscribeAccountToWebhooks(shortLived.access_token);
 
-console.log("PROFILE", profile);
+    const expiresAt = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000);
+
     await InstagramAccount.findOneAndUpdate(
-      { igBusinessId: profile.id },
+      { igBusinessId: profile.user_id }, // profile.id NAHI, profile.user_id
       {
         user: pending.userId,
-        igBusinessId: profile.id,
+        igBusinessId: profile.user_id, // yahan bhi
         username: profile.username,
         profilePictureUrl: profile.profile_picture_url,
-        accessTokenEncrypted: encrypt(longLived.access_token),
+        accessTokenEncrypted: encrypt(shortLived.access_token),
         tokenExpiresAt: expiresAt,
         isActive: true,
       },
-      { upsert: true, new: true }
+      { upsert: true, new: true },
     );
-
     res.redirect(`${frontendUrl}/dashboard?connected=success`);
   } catch (err) {
-    console.error("Instagram connect error:", err.response?.data || err.message);
+    console.error(
+      "Instagram connect error:",
+      err.response?.data || err.message,
+    );
     res.redirect(`${frontendUrl}/connect-instagram?error=connection_failed`);
   }
 }
 
 // GET /api/instagram/accounts — list connected accounts for the logged-in user
 export async function listAccounts(req, res) {
-  const accounts = await InstagramAccount.find({ user: req.user._id, isActive: true }).select(
-    "-accessTokenEncrypted"
-  );
+  const accounts = await InstagramAccount.find({
+    user: req.user._id,
+    isActive: true,
+  }).select("-accessTokenEncrypted");
   res.json({ accounts });
 }
 
@@ -81,7 +91,7 @@ export async function disconnectAccount(req, res) {
   const account = await InstagramAccount.findOneAndUpdate(
     { _id: req.params.id, user: req.user._id },
     { isActive: false },
-    { new: true }
+    { new: true },
   );
   if (!account) return res.status(404).json({ error: "Account not found" });
   res.json({ success: true });
