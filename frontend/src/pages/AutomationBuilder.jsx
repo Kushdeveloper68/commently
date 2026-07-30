@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Instagram, Lock } from "lucide-react";
+import { Instagram, Lock, MessageSquare, CircleDot, Send } from "lucide-react";
 import toast from "react-hot-toast";
 import AppLayout from "../components/AppLayout.jsx";
 import PhonePreview from "../components/PhonePreview.jsx";
@@ -20,6 +20,7 @@ export default function AutomationBuilder() {
 
   const [form, setForm] = useState({
     name: "",
+    channel: "comment", // "comment" | "story_reply" | "dm"
     triggerType: "any_post",
     mediaId: "",
     keywordMode: "specific_words",
@@ -47,6 +48,7 @@ export default function AutomationBuilder() {
         setSelectedAccount(a.instagramAccount);
         setForm({
           name: a.name,
+          channel: a.channel || "comment",
           triggerType: a.trigger.type,
           mediaId: a.trigger.mediaId || "",
           keywordMode: a.keywordMatch.mode,
@@ -81,12 +83,19 @@ export default function AutomationBuilder() {
     const payload = {
       instagramAccountId: selectedAccount,
       name: form.name,
-      trigger: { type: form.triggerType, mediaId: form.triggerType === "specific_post" ? form.mediaId : undefined },
+      channel: form.channel,
+      trigger:
+        form.channel === "dm"
+          ? { type: "any_post" } // no post/story concept for plain DMs
+          : { type: form.triggerType, mediaId: form.triggerType === "specific_post" ? form.mediaId : undefined },
       keywordMatch: {
         mode: form.keywordMode,
         keywords: form.keywords.split(",").map((k) => k.trim()).filter(Boolean),
       },
-      publicReply: { enabled: form.publicReplyEnabled, message: form.publicReplyMessage },
+      publicReply:
+        form.channel === "comment"
+          ? { enabled: form.publicReplyEnabled, message: form.publicReplyMessage }
+          : { enabled: false, message: "" },
       followGate: { enabled: form.followGateEnabled, promptMessage: form.followGateMessage },
       dmReply: { message: form.dmMessage, buttonText: form.buttonText, buttonUrl: form.buttonUrl },
     };
@@ -143,41 +152,77 @@ export default function AutomationBuilder() {
             </select>
           </div>
 
-          {/* When someone comments on */}
+          {/* Channel selector */}
           <div className="card">
-            <h3 className="font-semibold mb-4">When someone comments on</h3>
-            <div className="space-y-2">
-              <RadioRow
-                checked={form.triggerType === "any_post"}
-                onClick={() => update({ triggerType: "any_post" })}
-                label="Any post or Reel"
+            <h3 className="font-semibold mb-4">Trigger source</h3>
+            <div className="grid grid-cols-3 gap-2">
+              <ChannelOption
+                icon={MessageSquare}
+                label="Comment"
+                sub="On posts & Reels"
+                active={form.channel === "comment"}
+                onClick={() => update({ channel: "comment" })}
               />
-              <RadioRow
-                checked={form.triggerType === "specific_post"}
-                onClick={() => update({ triggerType: "specific_post" })}
-                label="A specific post or Reel"
+              <ChannelOption
+                icon={CircleDot}
+                label="Story reply"
+                sub="Someone replies to your Story"
+                active={form.channel === "story_reply"}
+                onClick={() => update({ channel: "story_reply", triggerType: "any_post" })}
+              />
+              <ChannelOption
+                icon={Send}
+                label="Direct message"
+                sub="Any DM to your account"
+                active={form.channel === "dm"}
+                onClick={() => update({ channel: "dm" })}
               />
             </div>
-            {form.triggerType === "specific_post" && (
-              <div className="grid grid-cols-4 gap-2 mt-4">
-                {media.map((m) => (
-                  <button
-                    key={m.id}
-                    onClick={() => update({ mediaId: m.id })}
-                    className={`aspect-square rounded-lg overflow-hidden border-2 ${
-                      form.mediaId === m.id ? "border-gold" : "border-transparent"
-                    }`}
-                  >
-                    <img src={m.thumbnail_url || m.media_url} alt="" className="w-full h-full object-cover" />
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
+
+          {/* When someone comments on / replies to a Story */}
+          {form.channel !== "dm" && (
+            <div className="card">
+              <h3 className="font-semibold mb-4">
+                {form.channel === "story_reply" ? "When someone replies to" : "When someone comments on"}
+              </h3>
+              <div className="space-y-2">
+                <RadioRow
+                  checked={form.triggerType === "any_post"}
+                  onClick={() => update({ triggerType: "any_post" })}
+                  label={form.channel === "story_reply" ? "Any Story" : "Any post or Reel"}
+                />
+                {form.channel === "comment" && (
+                  <RadioRow
+                    checked={form.triggerType === "specific_post"}
+                    onClick={() => update({ triggerType: "specific_post" })}
+                    label="A specific post or Reel"
+                  />
+                )}
+              </div>
+              {form.channel === "comment" && form.triggerType === "specific_post" && (
+                <div className="grid grid-cols-4 gap-2 mt-4">
+                  {media.map((m) => (
+                    <button
+                      key={m.id}
+                      onClick={() => update({ mediaId: m.id })}
+                      className={`aspect-square rounded-lg overflow-hidden border-2 ${
+                        form.mediaId === m.id ? "border-gold" : "border-transparent"
+                      }`}
+                    >
+                      <img src={m.thumbnail_url || m.media_url} alt="" className="w-full h-full object-cover" />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* And this comment has */}
           <div className="card">
-            <h3 className="font-semibold mb-4">And this comment has</h3>
+            <h3 className="font-semibold mb-4">
+              And this {form.channel === "comment" ? "comment" : form.channel === "story_reply" ? "reply" : "message"} has
+            </h3>
             <div className="space-y-2 mb-4">
               <RadioRow
                 checked={form.keywordMode === "specific_words"}
@@ -202,21 +247,25 @@ export default function AutomationBuilder() {
               </div>
             )}
 
-            <label className="flex items-center justify-between mt-5 pt-4 border-t border-border">
-              <span className="text-sm">Reply to their comment publicly too</span>
-              <FeatureToggle
-                checked={form.publicReplyEnabled}
-                locked={isFree}
-                onClick={() => update({ publicReplyEnabled: !form.publicReplyEnabled })}
-              />
-            </label>
-            {form.publicReplyEnabled && (
-              <input
-                className="input-field mt-3"
-                placeholder="Thanks for your comment! Check your DMs 🙌"
-                value={form.publicReplyMessage}
-                onChange={(e) => update({ publicReplyMessage: e.target.value })}
-              />
+            {form.channel === "comment" && (
+              <>
+                <label className="flex items-center justify-between mt-5 pt-4 border-t border-border">
+                  <span className="text-sm">Reply to their comment publicly too</span>
+                  <FeatureToggle
+                    checked={form.publicReplyEnabled}
+                    locked={isFree}
+                    onClick={() => update({ publicReplyEnabled: !form.publicReplyEnabled })}
+                  />
+                </label>
+                {form.publicReplyEnabled && (
+                  <input
+                    className="input-field mt-3"
+                    placeholder="Thanks for your comment! Check your DMs 🙌"
+                    value={form.publicReplyMessage}
+                    onChange={(e) => update({ publicReplyMessage: e.target.value })}
+                  />
+                )}
+              </>
             )}
           </div>
 
@@ -287,6 +336,21 @@ export default function AutomationBuilder() {
         />
       </div>
     </AppLayout>
+  );
+}
+
+function ChannelOption({ icon: Icon, label, sub, active, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`text-left px-3 py-3 rounded-lg border transition-colors ${
+        active ? "border-gold bg-gold/5" : "border-border hover:bg-panel2"
+      }`}
+    >
+      <Icon size={16} className={active ? "text-gold-bright" : "text-muted"} />
+      <div className={`text-sm font-medium mt-2 ${active ? "text-gold-bright" : ""}`}>{label}</div>
+      <div className="text-xs text-muted mt-0.5">{sub}</div>
+    </button>
   );
 }
 

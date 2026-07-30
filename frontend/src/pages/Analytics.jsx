@@ -27,6 +27,7 @@ export default function Analytics() {
   const [keywords, setKeywords] = useState([]);
   const [activity, setActivity] = useState([]);
   const [series, setSeries] = useState([]);
+  const [leads, setLeads] = useState([]);
   const [rangeDays, setRangeDays] = useState(30);
 
   useEffect(() => {
@@ -36,12 +37,14 @@ export default function Analytics() {
       api.get("/analytics/keywords"),
       api.get("/analytics/activity?limit=10"),
       api.get(`/analytics/timeseries?days=${rangeDays}`),
+      api.get("/analytics/leads?limit=8"),
     ])
-      .then(([o, k, a, t]) => {
+      .then(([o, k, a, t, l]) => {
         setOverview(o.data);
         setKeywords(k.data.keywords);
         setActivity(a.data.activity);
         setSeries(t.data.series);
+        setLeads(l.data.leads);
       })
       .catch((err) => {
         if (err.response?.status === 403) setLocked(true);
@@ -62,11 +65,22 @@ export default function Analytics() {
         <DashboardStatsSkeleton />
       ) : (
         <>
-          <div className="grid grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-4 gap-4 mb-4">
             <StatCard icon={Target} label="Comments matched" value={overview.totals.commentsMatched} />
             <StatCard icon={Send} label="DMs sent" value={overview.totals.dmsSent} />
             <StatCard icon={TrendingUp} label="Success rate" value={`${overview.totals.successRate}%`} />
             <StatCard icon={Clock} label="Pending follow taps" value={overview.totals.pendingFollowConfirmations} />
+          </div>
+
+          <div className="flex gap-3 mb-6">
+            {overview.byChannel.map((c) => (
+              <div key={c.channel} className="card flex-1 py-3">
+                <div className="text-xs text-muted mb-1">{CHANNEL_LABELS[c.channel]}</div>
+                <div className="font-display text-xl font-bold text-gold-bright">
+                  {c.dmsSent} <span className="text-sm text-muted font-normal">/ {c.matched} matched</span>
+                </div>
+              </div>
+            ))}
           </div>
 
           <div className="grid grid-cols-3 gap-6 mb-8">
@@ -120,9 +134,60 @@ export default function Analytics() {
             <KeywordPerformance keywords={keywords} />
             <RecentActivity activity={activity} loading={false} />
           </div>
+
+          <LeadsTable leads={leads} />
         </>
       )}
     </AppLayout>
+  );
+}
+
+const CHANNEL_LABELS = {
+  comment: "Comments",
+  story_reply: "Story replies",
+  dm: "Direct messages",
+};
+
+function LeadsTable({ leads }) {
+  return (
+    <div className="card mb-8">
+      <h2 className="font-semibold text-lg mb-4">Leads</h2>
+      <p className="text-xs text-muted -mt-3 mb-4">People who engaged and got a DM, across all channels.</p>
+      {leads.length === 0 ? (
+        <div className="text-sm text-muted py-8 text-center">No leads captured yet.</div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-xs text-muted border-b border-border">
+                <th className="pb-2 font-medium">Person</th>
+                <th className="pb-2 font-medium">Channel(s)</th>
+                <th className="pb-2 font-medium">Interactions</th>
+                <th className="pb-2 font-medium">Last automation</th>
+                <th className="pb-2 font-medium">Last seen</th>
+              </tr>
+            </thead>
+            <tbody>
+              {leads.map((lead) => (
+                <tr key={lead.id} className="border-b border-border last:border-0">
+                  <td className="py-2.5 font-medium">
+                    {lead.commenterUsername ? `@${lead.commenterUsername}` : "IG user"}
+                  </td>
+                  <td className="py-2.5 text-muted">
+                    {lead.channels.map((c) => CHANNEL_LABELS[c]).join(", ")}
+                  </td>
+                  <td className="py-2.5">{lead.interactionCount}</td>
+                  <td className="py-2.5 text-muted">{lead.lastAutomationName || "—"}</td>
+                  <td className="py-2.5 text-muted">
+                    {new Date(lead.lastInteractionAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
   );
 }
 
