@@ -26,6 +26,7 @@ export async function createAutomation(req, res) {
   const {
     instagramAccountId,
     name,
+    channel,
     trigger,
     keywordMatch,
     publicReply,
@@ -43,6 +44,9 @@ export async function createAutomation(req, res) {
 
   const limits = getPlanLimits(req.user.plan);
 
+  if (publicReply?.enabled && channel && channel !== "comment") {
+    return res.status(400).json({ error: "Public reply is only available for the comment channel" });
+  }
   if (publicReply?.enabled && !limits.features.publicReply) {
     return res
       .status(403)
@@ -64,6 +68,7 @@ export async function createAutomation(req, res) {
     user: req.user._id,
     instagramAccount: account._id,
     name,
+    channel,
     trigger,
     keywordMatch,
     publicReply,
@@ -80,6 +85,7 @@ export async function updateAutomation(req, res) {
   const allowedFields = [
     "name",
     "status",
+    "channel",
     "trigger",
     "keywordMatch",
     "publicReply",

@@ -18,12 +18,16 @@ async function getUserAccountIds(userId) {
 export async function getOverview(req, res) {
   const accountIds = await getUserAccountIds(req.user._id);
 
-  const [totalComments, dmsSent, dmsFailed, pendingGates, subscription] = await Promise.all([
+  const [totalComments, dmsSent, dmsFailed, pendingGates, subscription, channelBreakdown] = await Promise.all([
     InteractionLog.countDocuments({ instagramAccount: { $in: accountIds } }),
     InteractionLog.countDocuments({ instagramAccount: { $in: accountIds }, dmSent: true, gateStatus: { $ne: "pending_follow" } }),
     InteractionLog.countDocuments({ instagramAccount: { $in: accountIds }, dmSent: false }),
     InteractionLog.countDocuments({ instagramAccount: { $in: accountIds }, gateStatus: "pending_follow" }),
     Subscription.findOne({ user: req.user._id, status: "active" }).sort({ periodEnd: -1 }),
+    InteractionLog.aggregate([
+      { $match: { instagramAccount: { $in: accountIds } } },
+      { $group: { _id: "$channel", matched: { $sum: 1 }, dmsSent: { $sum: { $cond: ["$dmSent", 1, 0] } } } },
+    ]),
   ]);
 
   const limits = getPlanLimits(req.user.plan);
@@ -37,6 +41,12 @@ export async function getOverview(req, res) {
       pendingFollowConfirmations: pendingGates,
       successRate, // %
     },
+    // Breaks the same totals down by trigger source — comments, story
+    // replies, and plain DMs — so it's clear which channel is pulling weight.
+    byChannel: ["comment", "story_reply", "dm"].map((channel) => {
+      const row = channelBreakdown.find((c) => c._id === channel);
+      return { channel, matched: row?.matched || 0, dmsSent: row?.dmsSent || 0 };
+    }),
     usage: {
       plan: req.user.plan,
       dmsSentThisMonth: req.user.dmsSentThisMonth,
@@ -50,6 +60,64 @@ export async function getOverview(req, res) {
           renewsAt: subscription.periodEnd,
         }
       : null,
+  });
+}
+
+// GET /api/analytics/leads?page=1&limit=20
+// A "lead" is a unique person who engaged with an automation (commented,
+// replied to a story, or DM'd) and got a DM back — deduplicated by whoever
+// we actually have an identifier for (PSID, falling back to username for
+// comment-channel leads where we only captured a username).
+export async function getLeads(req, res) {
+  const page = Math.max(1, parseInt(req.query.page) || 1);
+  const limit = Math.min(50, parseInt(req.query.limit) || 20);
+  const accountIds = await getUserAccountIds(req.user._id);
+
+  const pipeline = [
+    { $match: { instagramAccount: { $in: accountIds }, dmSent: true } },
+    {
+      $group: {
+        _id: { $ifNull: ["$recipientPsid", "$commenterUsername"] },
+        commenterUsername: { $first: "$commenterUsername" },
+        recipientPsid: { $first: "$recipientPsid" },
+        channels: { $addToSet: "$channel" },
+        interactionCount: { $sum: 1 },
+        lastInteractionAt: { $max: "$createdAt" },
+        lastAutomation: { $last: "$automation" },
+      },
+    },
+    { $sort: { lastInteractionAt: -1 } },
+    { $skip: (page - 1) * limit },
+    { $limit: limit },
+  ];
+
+  const [leads, totalResult] = await Promise.all([
+    InteractionLog.aggregate(pipeline),
+    InteractionLog.aggregate([
+      { $match: { instagramAccount: { $in: accountIds }, dmSent: true } },
+      { $group: { _id: { $ifNull: ["$recipientPsid", "$commenterUsername"] } } },
+      { $count: "total" },
+    ]),
+  ]);
+
+  const populated = await Automation.populate(leads, { path: "lastAutomation", select: "name" });
+
+  res.json({
+    leads: populated.map((l) => ({
+      id: l._id,
+      commenterUsername: l.commenterUsername,
+      recipientPsid: l.recipientPsid,
+      channels: l.channels,
+      interactionCount: l.interactionCount,
+      lastInteractionAt: l.lastInteractionAt,
+      lastAutomationName: l.lastAutomation?.name,
+    })),
+    pagination: {
+      page,
+      limit,
+      total: totalResult[0]?.total || 0,
+      totalPages: Math.ceil((totalResult[0]?.total || 0) / limit),
+    },
   });
 }
 

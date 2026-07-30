@@ -5,9 +5,13 @@ const interactionLogSchema = new mongoose.Schema(
     automation: { type: mongoose.Schema.Types.ObjectId, ref: "Automation", required: true, index: true },
     instagramAccount: { type: mongoose.Schema.Types.ObjectId, ref: "InstagramAccount", required: true },
 
-    commentId: { type: String, required: true, unique: true }, // prevents double-replying to same comment
+    // "comment" logs use the Instagram comment ID here; "story_reply" and
+    // "dm" logs use the message ID (mid) — either way, this is what prevents
+    // double-replying to the same event on webhook retries.
+    channel: { type: String, enum: ["comment", "story_reply", "dm"], required: true, default: "comment" },
+    sourceId: { type: String, required: true, unique: true },
     commenterUsername: { type: String },
-    commentText: { type: String },
+    commentText: { type: String }, // holds the comment text, story-reply text, or DM text depending on channel
 
     dmSent: { type: Boolean, default: false },
     dmError: { type: String },

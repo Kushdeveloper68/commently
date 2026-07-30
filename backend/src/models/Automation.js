@@ -13,9 +13,14 @@ const automationSchema = new mongoose.Schema(
     name: { type: String, required: true, trim: true }, // e.g. "Website link automation"
     status: { type: String, enum: ["live", "draft", "paused"], default: "draft" },
 
+    // Which Instagram event this automation listens to. "comment" = V1/V2
+    // (post/reel comments). "story_reply" = someone replies to your Story.
+    // "dm" = any direct message sent to your account (no post/story tie-in).
+    channel: { type: String, enum: ["comment", "story_reply", "dm"], default: "comment" },
+
     trigger: {
       type: { type: String, enum: ["specific_post", "any_post"], default: "any_post" },
-      mediaId: { type: String }, // Instagram media ID, if type === "specific_post"
+      mediaId: { type: String }, // Instagram media/story ID, if type === "specific_post" (unused for channel: "dm")
       mediaThumbnailUrl: { type: String },
     },
 

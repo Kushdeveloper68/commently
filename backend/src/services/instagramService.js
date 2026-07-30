@@ -206,6 +206,38 @@ export async function sendDirectMessage(accessToken, recipientPsid, text, button
   return data;
 }
 
+// Same as sendPrivateReplyWithButton, but for story-reply/DM follow-gates —
+// these aren't tied to a comment_id, so we address the recipient by PSID
+// (we already have it, since the trigger itself was a message event).
+export async function sendDirectMessageWithButton(accessToken, recipientPsid, promptMessage, buttonText, payload) {
+  const url = `${GRAPH_BASE}/me/messages`;
+
+  const { data } = await axios.post(
+    url,
+    {
+      recipient: { id: recipientPsid },
+      message: {
+        attachment: {
+          type: "template",
+          payload: {
+            template_type: "button",
+            text: promptMessage,
+            buttons: [{ type: "postback", title: buttonText, payload }],
+          },
+        },
+      },
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+    },
+  );
+
+  return data;
+}
+
 export async function sendPublicReply(accessToken, commentId, message) {
   const url = `${GRAPH_BASE}/${commentId}/replies`;
 
