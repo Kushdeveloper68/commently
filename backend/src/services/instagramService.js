@@ -120,6 +120,89 @@ export async function sendPrivateReply(accessToken, commentId, message) {
     },
   );
 
+  return data; // { recipient_id, message_id } — recipient_id is the commenter's PSID, save it for follow-ups
+}
+
+// Sends the initial follow-gate DM as a private reply, with a tappable
+// "I followed" button (a postback, not a URL) so we know when to release
+// the real message.
+export async function sendPrivateReplyWithButton(accessToken, commentId, promptMessage, buttonText, payload) {
+  const url = `${GRAPH_BASE}/me/messages`;
+
+  const { data } = await axios.post(
+    url,
+    {
+      recipient: {
+        comment_id: commentId,
+      },
+      message: {
+        attachment: {
+          type: "template",
+          payload: {
+            template_type: "button",
+            text: promptMessage,
+            buttons: [
+              {
+                type: "postback",
+                title: buttonText,
+                payload,
+              },
+            ],
+          },
+        },
+      },
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+    },
+  );
+
+  return data; // { recipient_id, message_id }
+}
+
+// Sends a follow-up DM to an existing conversation using the recipient's
+// PSID (not a comment_id) — used to release the real automation message
+// once a follow-gate postback confirms the user tapped "I followed".
+// If buttonUrl is provided, sends a tappable link button instead of plain text.
+export async function sendDirectMessage(accessToken, recipientPsid, text, buttonText, buttonUrl) {
+  const url = `${GRAPH_BASE}/me/messages`;
+
+  const message = buttonUrl
+    ? {
+        attachment: {
+          type: "template",
+          payload: {
+            template_type: "button",
+            text,
+            buttons: [
+              {
+                type: "web_url",
+                title: buttonText || "Open link",
+                url: buttonUrl,
+              },
+            ],
+          },
+        },
+      }
+    : { text };
+
+  const { data } = await axios.post(
+    url,
+    {
+      recipient: { id: recipientPsid },
+      message,
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+    },
+  );
+
   return data;
 }
 

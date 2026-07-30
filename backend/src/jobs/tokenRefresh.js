@@ -6,7 +6,7 @@ import { encrypt, decrypt } from "../utils/crypto.js";
 // Instagram long-lived tokens last 60 days and can only be refreshed once
 // they're at least 24 hours old but not yet expired. We refresh anything
 // expiring in the next 7 days, and run daily so no account slips through.
-const REFRESH_WINDOW_DAYS = 60;
+const REFRESH_WINDOW_DAYS = 7;
 
 export async function refreshExpiringTokens() {
   const cutoff = new Date(Date.now() + REFRESH_WINDOW_DAYS * 24 * 60 * 60 * 1000);
@@ -36,16 +36,20 @@ export async function refreshExpiringTokens() {
 
       console.log(`✅ Refreshed token for ${account.username} (${account.igBusinessId})`);
     } catch (err) {
+      const meta = err.response?.data?.error;
       console.error(
         `❌ Refresh failed for ${account.username} (${account.igBusinessId}):`,
-        err.response?.data || err.message,
+        meta || err.message,
       );
 
-      // If the token is already too far gone to refresh (e.g. it expired
-      // before the job ran, or the user revoked access), don't fail forever —
-      // flag it so the frontend can prompt a reconnect.
-      account.needsReconnect = true;
-      await account.save();
+      // Instagram rejects refreshing a token that's less than 24h old — that's
+      // not a real problem, just try again on tomorrow's run. Anything else
+      // (revoked access, invalid token, etc.) genuinely needs a reconnect.
+      const tooYoung = meta?.message?.toLowerCase().includes("24 hours");
+      if (!tooYoung) {
+        account.needsReconnect = true;
+        await account.save();
+      }
     }
   }
 }

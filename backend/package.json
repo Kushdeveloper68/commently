@@ -5,7 +5,7 @@
   "main": "src/server.js",
   "type": "module",
   "scripts": {
-    "start": "node src/server.js",
+    "start": "nodemon node src/server.js",
     "dev": "node --watch src/server.js"
   },
   "dependencies": {
@@ -23,6 +23,7 @@
     "mongoose": "^8.5.1",
     "morgan": "^1.10.0",
     "node-cron": "^3.0.3",
+    "nodemon": "^3.1.14",
     "razorpay": "^2.9.4",
     "zod": "^3.23.8"
   }

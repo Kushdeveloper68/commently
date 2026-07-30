@@ -36,3 +36,15 @@ export function hasReachedDmQuota(user) {
   const limits = getPlanLimits(user.plan);
   return user.dmsSentThisMonth >= limits.maxDmsPerMonth;
 }
+
+// Blocks the analytics dashboard for plans that don't include it (free, starter)
+export function requireAnalyticsAccess(req, res, next) {
+  const limits = getPlanLimits(req.user.plan);
+  if (!limits.features.analytics) {
+    return res.status(403).json({
+      error: `Analytics dashboard is available on the Pro plan. Upgrade to unlock it.`,
+      code: "PLAN_LIMIT_ANALYTICS",
+    });
+  }
+  next();
+}

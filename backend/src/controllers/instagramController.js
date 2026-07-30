@@ -44,24 +44,29 @@ export async function handleCallback(req, res) {
     pendingStates.delete(state);
 
     const shortLived = await exchangeCodeForToken(code);
-    // TEMP TEST: exchange skip, seedha short token se profile fetch try kar
-    const profile = await getInstagramProfile(shortLived.access_token);
+    console.log("✅ SHORT", shortLived.access_token.slice(0, 15) + "...");
+
+    const longLived = await exchangeForLongLivedToken(shortLived.access_token);
+    console.log("✅ LONG — expires in", longLived.expires_in, "seconds");
+
+    const profile = await getInstagramProfile(longLived.access_token);
     console.log("✅ PROFILE", profile);
 
-    await subscribeAccountToWebhooks(shortLived.access_token);
+    await subscribeAccountToWebhooks(longLived.access_token);
 
-    const expiresAt = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000);
+    const expiresAt = new Date(Date.now() + longLived.expires_in * 1000);
 
     await InstagramAccount.findOneAndUpdate(
-      { igBusinessId: profile.user_id }, // profile.id NAHI, profile.user_id
+      { igBusinessId: profile.user_id },
       {
         user: pending.userId,
-        igBusinessId: profile.user_id, // yahan bhi
+        igBusinessId: profile.user_id,
         username: profile.username,
         profilePictureUrl: profile.profile_picture_url,
-        accessTokenEncrypted: encrypt(shortLived.access_token),
-        tokenExpiresAt: expiresAt,
+        accessTokenEncrypted: encrypt(longLived.access_token), // long-lived token store karo, short-lived nahi
+        tokenExpiresAt: expiresAt, // ab REAL expiry (~60 din), koi hardcoded jhooth nahi
         isActive: true,
+        needsReconnect: false,
       },
       { upsert: true, new: true },
     );

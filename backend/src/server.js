@@ -16,6 +16,7 @@ import instagramRoutes from "./routes/instagramRoutes.js";
 import automationRoutes from "./routes/automationRoutes.js";
 import webhookRoutes from "./routes/webhookRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
+import analyticsRoutes from "./routes/analyticsRoutes.js";
 import { handleRazorpayWebhook } from "./controllers/paymentController.js";
 
 
@@ -50,6 +51,7 @@ app.use("/api/instagram", instagramRoutes);
 app.use("/api/automations", automationRoutes);
 app.use("/api/webhook", webhookRoutes);
 app.use("/api/billing", paymentRoutes);
+app.use("/api/analytics", analyticsRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
