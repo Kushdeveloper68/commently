@@ -9,6 +9,7 @@ import dotenv from "dotenv";
 
 import { connectDB } from "./config/db.js";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
+import { startTokenRefreshCron } from "./jobs/tokenRefresh.js";
 
 import authRoutes from "./routes/authRoutes.js";
 import instagramRoutes from "./routes/instagramRoutes.js";
@@ -59,4 +60,5 @@ connectDB().then(() => {
   app.listen(PORT, () => {
     console.log(`🚀 Commently backend running on port ${PORT}`);
   });
+  startTokenRefreshCron();
 });

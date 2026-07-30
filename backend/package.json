@@ -9,20 +9,21 @@
     "dev": "node --watch src/server.js"
   },
   "dependencies": {
-    "express": "^4.19.2",
-    "mongoose": "^8.5.1",
-    "dotenv": "^16.4.5",
-    "cors": "^2.8.5",
     "axios": "^1.7.2",
-    "jsonwebtoken": "^9.0.2",
     "bcryptjs": "^2.4.3",
-    "google-auth-library": "^9.11.0",
-    "razorpay": "^2.9.4",
     "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
+    "crypto": "^1.0.1",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
     "express-rate-limit": "^7.4.0",
+    "google-auth-library": "^9.11.0",
     "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.5.1",
     "morgan": "^1.10.0",
-    "zod": "^3.23.8",
-    "crypto": "^1.0.1"
+    "node-cron": "^3.0.3",
+    "razorpay": "^2.9.4",
+    "zod": "^3.23.8"
   }
 }

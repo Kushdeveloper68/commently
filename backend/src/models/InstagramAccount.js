@@ -14,6 +14,10 @@ const instagramAccountSchema = new mongoose.Schema(
 
     isActive: { type: Boolean, default: true },
     connectedAt: { type: Date, default: Date.now },
+
+    // Token refresh bookkeeping — used by the daily refresh cron job
+    lastRefreshedAt: { type: Date },
+    needsReconnect: { type: Boolean, default: false }, // true if refresh has failed repeatedly — surface a "reconnect" prompt in the UI
   },
   { timestamps: true }
 );
