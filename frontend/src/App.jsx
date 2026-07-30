@@ -11,6 +11,7 @@ import Automations from "./pages/Automations.jsx";
 import AutomationBuilder from "./pages/AutomationBuilder.jsx";
 import Profile from "./pages/Profile.jsx";
 import Billing from "./pages/Billing.jsx";
+import Analytics from "./pages/Analytics.jsx";
 
 export default function App() {
   return (
@@ -30,6 +31,7 @@ export default function App() {
           <Route path="/connect-instagram" element={<ProtectedRoute><ConnectInstagram /></ProtectedRoute>} />
           <Route path="/automations" element={<ProtectedRoute><Automations /></ProtectedRoute>} />
           <Route path="/automations/:id" element={<ProtectedRoute><AutomationBuilder /></ProtectedRoute>} />
+          <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
           <Route path="/billing" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
         </Routes>

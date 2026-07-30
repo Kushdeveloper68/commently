@@ -1,10 +1,11 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Zap, Instagram, CreditCard, User, LogOut } from "lucide-react";
+import { LayoutDashboard, Zap, Instagram, CreditCard, User, LogOut, BarChart3 } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
 
 const links = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/automations", label: "Automations", icon: Zap },
+  { to: "/analytics", label: "Analytics", icon: BarChart3 },
   { to: "/connect-instagram", label: "Instagram Accounts", icon: Instagram },
   { to: "/billing", label: "Billing", icon: CreditCard },
   { to: "/profile", label: "Profile", icon: User },
