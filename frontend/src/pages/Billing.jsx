@@ -22,6 +22,34 @@ const PLAN_DISPLAY = {
 export default function Billing() {
   const { user, refetch } = useAuth();
   const [loadingPlan, setLoadingPlan] = useState(null);
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelInfo, setCancelInfo] = useState(null);
+
+  useEffect(() => {
+    if (user?.plan !== "free") {
+      api
+        .get("/billing/history")
+        .then(({ data }) => {
+          const active = data.subscriptions.find((s) => s.status === "active");
+          if (active) setCancelInfo(active);
+        })
+        .catch(() => {});
+    }
+  }, [user?.plan]);
+
+  const handleCancel = async () => {
+    if (!window.confirm("Cancel your subscription? You'll keep access until the end of your current billing period.")) return;
+    setCancelling(true);
+    try {
+      const { data } = await api.post("/billing/cancel");
+      toast.success(data.message);
+      refetch();
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Could not cancel subscription");
+    } finally {
+      setCancelling(false);
+    }
+  };
 
   useEffect(() => {
     const script = document.createElement("script");
@@ -109,6 +137,31 @@ export default function Billing() {
           );
         })}
       </div>
+
+      {user?.plan !== "free" && (
+        <div className="card mt-6 max-w-lg">
+          <h3 className="font-semibold mb-1">Manage subscription</h3>
+          {cancelInfo?.autoRenew === false ? (
+            <p className="text-sm text-muted">
+              Your plan is cancelled and will move to Free on{" "}
+              {new Date(cancelInfo.periodEnd).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}.
+            </p>
+          ) : (
+            <>
+              <p className="text-sm text-muted mb-4">
+                Cancelling stops future renewal — you keep access through the end of your current period.
+              </p>
+              <button
+                onClick={handleCancel}
+                disabled={cancelling}
+                className="text-sm font-medium text-danger hover:underline disabled:opacity-50"
+              >
+                {cancelling ? "Cancelling..." : "Cancel subscription"}
+              </button>
+            </>
+          )}
+        </div>
+      )}
     </AppLayout>
   );
 }

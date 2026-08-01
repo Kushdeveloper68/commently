@@ -4,6 +4,7 @@ import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider } from "./context/AuthContext.jsx";
 import { ThemeProvider } from "./context/ThemeContext.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
+import ErrorBoundary from "./components/ErrorBoundary.jsx";
 
 import Landing from "./pages/Landing.jsx";
 import Login from "./pages/Login.jsx";
@@ -17,9 +18,11 @@ import Analytics from "./pages/Analytics.jsx";
 import Terms from "./pages/legal/Terms.jsx";
 import PrivacyPolicy from "./pages/legal/PrivacyPolicy.jsx";
 import RefundPolicy from "./pages/legal/RefundPolicy.jsx";
+import NotFound from "./pages/NotFound.jsx";
 
 export default function App() {
   return (
+    <ErrorBoundary>
     <HelmetProvider>
       <ThemeProvider>
         <BrowserRouter>
@@ -49,10 +52,13 @@ export default function App() {
               <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
               <Route path="/billing" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
+
+              <Route path="*" element={<NotFound />} />
             </Routes>
           </AuthProvider>
         </BrowserRouter>
       </ThemeProvider>
     </HelmetProvider>
+    </ErrorBoundary>
   );
 }
