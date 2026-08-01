@@ -25,6 +25,12 @@ const userSchema = new mongoose.Schema(
     // Usage limits enforced at the plan level (see planLimits.js)
     dmsSentThisMonth: { type: Number, default: 0 },
     usageResetAt: { type: Date, default: Date.now },
+    // Prevents spamming quota-warning emails — set once per usage cycle,
+    // cleared by the monthly usage-reset cron.
+    quota80AlertSentAt: { type: Date },
+    quota100AlertSentAt: { type: Date },
+
+    termsAcceptedAt: { type: Date }, // recorded when the user signs up (clickwrap: "by continuing you agree...")
 
     isActive: { type: Boolean, default: true },
   },
