@@ -1,5 +1,9 @@
 import { OAuth2Client } from "google-auth-library";
 import User from "../models/User.js";
+import InstagramAccount from "../models/InstagramAccount.js";
+import Automation from "../models/Automation.js";
+import InteractionLog from "../models/InteractionLog.js";
+import Subscription from "../models/Subscription.js";
 import {
   signAccessToken,
   signRefreshToken,
@@ -53,6 +57,10 @@ export async function googleLogin(req, res) {
           email: payload.email,
           googleId: payload.sub,
           avatarUrl: payload.picture,
+          // Consent is shown as clickwrap text right above the Google
+          // button on the login page ("By continuing, you agree to...") —
+          // clicking through to sign in constitutes acceptance.
+          termsAcceptedAt: new Date(),
         });
       }
     }
@@ -92,6 +100,30 @@ export async function logout(req, res) {
 // GET /api/auth/me
 export async function getMe(req, res) {
   res.json({ user: sanitizeUser(req.user) });
+}
+
+// DELETE /api/auth/account — permanent, cascades everything. Requires the
+// frontend to have already confirmed intent (e.g. "type DELETE to confirm").
+export async function deleteAccount(req, res) {
+  try {
+    const userId = req.user._id;
+
+    const accounts = await InstagramAccount.find({ user: userId }).select("_id");
+    const accountIds = accounts.map((a) => a._id);
+
+    await InteractionLog.deleteMany({ instagramAccount: { $in: accountIds } });
+    await Automation.deleteMany({ instagramAccount: { $in: accountIds } });
+    await InstagramAccount.deleteMany({ user: userId });
+    await Subscription.deleteMany({ user: userId });
+    await User.findByIdAndDelete(userId);
+
+    res.clearCookie("accessToken");
+    res.clearCookie("refreshToken");
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Account deletion failed:", err.message);
+    res.status(500).json({ error: "Could not delete account. Please contact support." });
+  }
 }
 
 function sanitizeUser(user) {

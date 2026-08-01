@@ -1,6 +1,9 @@
 import crypto from "crypto";
 import InstagramAccount from "../models/InstagramAccount.js";
+import Automation from "../models/Automation.js";
+import InteractionLog from "../models/InteractionLog.js";
 import { encrypt } from "../utils/crypto.js";
+import { parseSignedRequest } from "../services/metaSignedRequest.js";
 import {
   getInstagramAuthUrl,
   exchangeCodeForToken,
@@ -98,4 +101,60 @@ export async function disconnectAccount(req, res) {
   );
   if (!account) return res.status(404).json({ error: "Account not found" });
   res.json({ success: true });
+}
+
+// POST /api/instagram/deauthorize — Meta calls this when a user removes
+// Commently's access directly from Instagram (not through our UI). Without
+// this, we'd only find out once the stored token starts failing — possibly
+// days later, via the refresh cron. Register this URL as the "Deauthorize
+// Callback URL" in Meta App Dashboard → Instagram API → API setup.
+export async function handleDeauthorize(req, res) {
+  try {
+    const payload = parseSignedRequest(req.body.signed_request, process.env.META_APP_SECRET);
+
+    await InstagramAccount.updateMany(
+      { igBusinessId: payload.user_id },
+      { isActive: false, needsReconnect: true },
+    );
+
+    console.log(`🔌 Deauthorized by Meta: igBusinessId ${payload.user_id}`);
+    res.sendStatus(200);
+  } catch (err) {
+    console.error("Deauthorize callback error:", err.message);
+    res.sendStatus(400);
+  }
+}
+
+// POST /api/instagram/data-deletion — Meta calls this when a user requests
+// data deletion via Instagram's own settings (separate from deauthorizing).
+// We must respond with a confirmation URL + code per Meta's spec. Register
+// this as the "Data Deletion Request Callback URL" in the same dashboard section.
+export async function handleDataDeletionRequest(req, res) {
+  try {
+    const payload = parseSignedRequest(req.body.signed_request, process.env.META_APP_SECRET);
+    const account = await InstagramAccount.findOne({ igBusinessId: payload.user_id });
+
+    if (account) {
+      await InteractionLog.deleteMany({ instagramAccount: account._id });
+      await Automation.deleteMany({ instagramAccount: account._id });
+      await account.deleteOne();
+      console.log(`🗑️  Data deleted for igBusinessId ${payload.user_id}`);
+    }
+
+    const confirmationCode = crypto.randomBytes(8).toString("hex");
+    res.json({
+      url: `${process.env.BACKEND_URL}/api/instagram/data-deletion-status?id=${confirmationCode}`,
+      confirmation_code: confirmationCode,
+    });
+  } catch (err) {
+    console.error("Data deletion callback error:", err.message);
+    res.sendStatus(400);
+  }
+}
+
+// GET /api/instagram/data-deletion-status?id=... — the confirmation page
+// Meta links the user to after a data-deletion request. Doesn't need to do
+// anything beyond confirming receipt.
+export function dataDeletionStatus(req, res) {
+  res.json({ status: "complete", confirmation_code: req.query.id });
 }

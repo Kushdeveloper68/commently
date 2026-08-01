@@ -2,6 +2,8 @@ import User from "../models/User.js";
 import Subscription from "../models/Subscription.js";
 import { getPlanLimits, PLAN_LIMITS } from "../config/planLimits.js";
 import { createOrder, verifyPaymentSignature, verifyWebhookSignature } from "../services/razorpayService.js";
+import { sendEmailAsync } from "../services/emailService.js";
+import { subscriptionCancelledEmail, paymentReceiptEmail } from "../services/emailTemplates.js";
 
 // GET /api/billing/plans — public pricing data for the pricing page
 export function getPlans(req, res) {
@@ -73,6 +75,8 @@ export async function verifyPayment(req, res) {
       planRenewsAt: subscription.periodEnd,
     });
 
+    sendEmailAsync(paymentReceiptEmail(req.user, subscription));
+
     res.json({ success: true, plan: subscription.plan });
   } catch (err) {
     console.error("Payment verification crashed:", err.message);
@@ -125,6 +129,40 @@ export async function handleRazorpayWebhook(req, res) {
   } catch (err) {
     console.error("Webhook processing failed:", err.message);
     res.sendStatus(200); // still 200 — we don't want Razorpay retry-storming us over our own bug
+  }
+}
+
+// POST /api/billing/cancel — stops the plan from continuing past the
+// current period. Note: billing here uses one-time Razorpay Orders, not
+// Razorpay's recurring Subscriptions API, so there's no actual auto-charge
+// to cancel on Razorpay's side — this just marks intent and stops the
+// renewal reminder / access after periodEnd. The expiry cron (see
+// jobs/subscriptionExpiry.js) downgrades the account to Free once
+// periodEnd passes.
+export async function cancelSubscription(req, res) {
+  try {
+    const subscription = await Subscription.findOne({ user: req.user._id, status: "active" }).sort({
+      periodEnd: -1,
+    });
+
+    if (!subscription) {
+      return res.status(404).json({ error: "No active subscription found" });
+    }
+
+    subscription.autoRenew = false;
+    subscription.cancelledAt = new Date();
+    await subscription.save();
+
+    sendEmailAsync(subscriptionCancelledEmail(req.user, subscription));
+
+    res.json({
+      success: true,
+      message: `Your plan stays active until ${subscription.periodEnd.toLocaleDateString("en-IN")}, then moves to Free.`,
+      accessUntil: subscription.periodEnd,
+    });
+  } catch (err) {
+    console.error("Cancel subscription failed:", err.message);
+    res.status(500).json({ error: "Could not cancel subscription. Please try again." });
   }
 }
 
