@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /automations
+Disallow: /analytics
+Disallow: /billing
+Disallow: /profile
+Disallow: /connect-instagram
+
+Sitemap: https://commently.app/sitemap.xml

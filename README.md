@@ -58,6 +58,45 @@ Runs on `http://localhost:5173`.
 - Profile page
 - Billing page with Razorpay Checkout integration
 
+# Commently — UI overhaul (this session's changes)
+
+Extract this into your `commently/` repo root and overwrite the matching paths.
+All paths below are relative to `frontend/`.
+
+## New files
+- `src/context/ThemeContext.jsx` — light/dark mode state, persisted in localStorage
+- `src/components/ThemeToggle.jsx` — sun/moon toggle button
+- `src/pages/legal/LegalLayout.jsx` — shared wrapper for legal pages
+- `src/pages/legal/Terms.jsx`
+- `src/pages/legal/PrivacyPolicy.jsx`
+- `src/pages/legal/RefundPolicy.jsx`
+- `public/robots.txt`
+- `public/sitemap.xml`
+
+## Rewritten files
+- `tailwind.config.js` — new trust-blue palette, CSS-variable-driven for light/dark
+- `src/index.css` — theme CSS variables (`:root` = dark, `.light` = light), fixed `.btn-primary`/`.input-field`
+- `index.html` — new fonts (Instrument Sans / Manrope / IBM Plex Mono), SEO meta tags
+- `src/App.jsx` — wrapped with `ThemeProvider` + `HelmetProvider`, added `/terms` `/privacy` `/refund-policy` routes
+- `src/components/Sidebar.jsx` — responsive mobile drawer nav + theme toggle
+- `src/components/AppLayout.jsx` — responsive spacing for the mobile top bar
+- `src/components/Skeletons.jsx` — skeleton colors now read the live theme instead of being hardcoded
+- `src/pages/Landing.jsx` — full rebuild
+- `src/pages/Analytics.jsx` — only the `TrendChart` component changed (chart colors now theme-aware)
+- `src/pages/Billing.jsx` — only the Razorpay checkout `theme.color` line changed (now `#2954ff`)
+
+## After extracting
+```bash
+cd frontend
+npm install    # picks up react-helmet-async (newly added)
+npm run dev
+```
+
+## Two things to double check
+1. **Domain placeholders**: `index.html`, `public/robots.txt`, and `public/sitemap.xml` all reference `commently.app` as a placeholder domain. Update these once you've picked/hosted on a real domain.
+2. **Legal page emails**: Terms/Privacy/Refund pages reference `support@commently.app`, `privacy@commently.app`, `billing@commently.app`, `sales@commently.app` — swap these for real inboxes you'll actually monitor before launch. These pages are a solid first draft but haven't been reviewed by a lawyer — worth a quick pass before you're taking real payments from client accounts.
+
+
 ## Still to configure/build (next steps)
 
 1. **Meta App setup** — create/reuse your Meta Developer App, get `META_APP_ID` / `META_APP_SECRET`,
