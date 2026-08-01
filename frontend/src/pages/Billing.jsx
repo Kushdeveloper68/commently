@@ -42,7 +42,7 @@ export default function Billing() {
         order_id: data.orderId,
         name: "Commently",
         description: `${PLAN_DISPLAY[plan].label} Plan Subscription`,
-        theme: { color: "#c9a86a" },
+        theme: { color: "#2954ff" },
         handler: async (response) => {
           try {
             await api.post("/billing/verify", {

@@ -233,6 +233,16 @@ function UsageBar({ usage }) {
 }
 
 function TrendChart({ series }) {
+  // Recharts needs literal color strings, not Tailwind classes — read the
+  // live theme variables so the chart matches whichever mode is active.
+  const styles = getComputedStyle(document.documentElement);
+  const cBrand = `rgb(${styles.getPropertyValue("--brand").trim() || "41 84 255"})`;
+  const cMint = `rgb(${styles.getPropertyValue("--mint").trim() || "34 197 139"})`;
+  const cMuted = `rgb(${styles.getPropertyValue("--muted").trim() || "136 146 166"})`;
+  const cBorder = styles.getPropertyValue("--border").trim();
+  const cPanel = styles.getPropertyValue("--panel").trim() || "#101a2e";
+  const cInk = `rgb(${styles.getPropertyValue("--ink").trim() || "238 241 248"})`;
+
   if (series.length === 0) {
     return <div className="text-sm text-muted py-12 text-center">No activity in this range yet.</div>;
   }
@@ -241,33 +251,33 @@ function TrendChart({ series }) {
       <AreaChart data={series} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
         <defs>
           <linearGradient id="commentsGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="#c9a86a" stopOpacity={0.35} />
-            <stop offset="95%" stopColor="#c9a86a" stopOpacity={0} />
+            <stop offset="5%" stopColor={cBrand} stopOpacity={0.35} />
+            <stop offset="95%" stopColor={cBrand} stopOpacity={0} />
           </linearGradient>
           <linearGradient id="dmsGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="#6ac98a" stopOpacity={0.35} />
-            <stop offset="95%" stopColor="#6ac98a" stopOpacity={0} />
+            <stop offset="5%" stopColor={cMint} stopOpacity={0.35} />
+            <stop offset="95%" stopColor={cMint} stopOpacity={0} />
           </linearGradient>
         </defs>
-        <CartesianGrid strokeDasharray="3 3" stroke="rgba(201,168,106,0.08)" vertical={false} />
+        <CartesianGrid strokeDasharray="3 3" stroke={cBorder} vertical={false} />
         <XAxis
           dataKey="date"
-          tick={{ fill: "#a39a8a", fontSize: 11 }}
+          tick={{ fill: cMuted, fontSize: 11 }}
           axisLine={false}
           tickLine={false}
           tickFormatter={(d) => new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
         />
-        <YAxis tick={{ fill: "#a39a8a", fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
+        <YAxis tick={{ fill: cMuted, fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
         <Tooltip
-          contentStyle={{ background: "#1a1a1a", border: "1px solid rgba(201,168,106,0.2)", borderRadius: 8 }}
-          labelStyle={{ color: "#ece7dd" }}
+          contentStyle={{ background: cPanel, border: `1px solid ${cBorder}`, borderRadius: 8 }}
+          labelStyle={{ color: cInk }}
           labelFormatter={(d) => new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
         />
         <Area
           type="monotone"
           dataKey="commentsMatched"
           name="Comments matched"
-          stroke="#c9a86a"
+          stroke={cBrand}
           fill="url(#commentsGrad)"
           strokeWidth={2}
         />
@@ -275,7 +285,7 @@ function TrendChart({ series }) {
           type="monotone"
           dataKey="dmsSent"
           name="DMs sent"
-          stroke="#6ac98a"
+          stroke={cMint}
           fill="url(#dmsGrad)"
           strokeWidth={2}
         />
