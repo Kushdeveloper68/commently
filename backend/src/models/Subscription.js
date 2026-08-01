@@ -20,6 +20,14 @@ const subscriptionSchema = new mongoose.Schema(
 
     periodStart: { type: Date },
     periodEnd: { type: Date },
+
+    // Note: billing today uses one-time Razorpay Orders, not Razorpay's
+    // recurring Subscriptions API — nothing auto-charges the user next
+    // month. autoRenew/cancelledAt are bookkeeping for the cancel flow and
+    // support visibility; the expiry cron downgrades ANY subscription past
+    // periodEnd regardless of this flag, since nothing re-charges it anyway.
+    autoRenew: { type: Boolean, default: true },
+    cancelledAt: { type: Date },
   },
   { timestamps: true }
 );

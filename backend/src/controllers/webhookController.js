@@ -11,6 +11,7 @@ import {
   sendDirectMessageWithButton,
 } from "../services/instagramService.js";
 import { hasReachedDmQuota } from "../middleware/planLimit.js";
+import { maybeSendQuotaAlerts } from "../services/usageAlerts.js";
 
 // GET /api/webhook/instagram — Meta's one-time verification handshake
 export function verifyWebhook(req, res) {
@@ -74,6 +75,7 @@ async function logAndUpdateStats({ automation, user, channel, sourceId, commente
       automation.stats.dmsSentCount += 1;
       user.dmsSentThisMonth += 1;
       await user.save();
+      maybeSendQuotaAlerts(user).catch((err) => console.error("Quota alert failed:", err.message)); // fire-and-forget
     }
     automation.stats.lastTriggeredAt = new Date();
     await automation.save();
@@ -339,6 +341,7 @@ async function handleFollowConfirmPostback(igBusinessId, messagingEvent) {
 
     user.dmsSentThisMonth += 1;
     await user.save();
+    maybeSendQuotaAlerts(user).catch((err) => console.error("Quota alert failed:", err.message)); // fire-and-forget
 
     // Public reply only applies to the comment flow — story replies/DMs have
     // no public comment thread to post into.
