@@ -1,38 +1,42 @@
 import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
-import { ArrowLeft } from "lucide-react";
-import ThemeToggle from "../../components/ThemeToggle.jsx";
+import { ArrowLeft, MessageSquare } from "lucide-react";
 
 export default function LegalLayout({ title, description, updatedAt, children }) {
   return (
-    <div className="min-h-screen bg-bg">
+    <div className="min-h-screen bg-background text-on-surface">
       <Helmet>
         <title>{title} — Commently</title>
         <meta name="description" content={description} />
         <meta name="robots" content="index, follow" />
       </Helmet>
 
-      <header className="border-b border-border">
+      <header className="border-b border-outline-variant">
         <div className="max-w-3xl mx-auto px-6 py-5 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2 text-sm text-muted hover:text-ink transition-colors">
+          <Link to="/" className="flex items-center gap-2 text-sm text-on-surface-variant hover:text-primary transition-colors">
             <ArrowLeft size={16} /> Back to Commently
           </Link>
-          <ThemeToggle />
+          <Link to="/" className="flex items-center gap-2">
+            <span className="w-6 h-6 rounded bg-primary flex items-center justify-center">
+              <MessageSquare size={13} className="text-on-primary" />
+            </span>
+            <span className="font-bold text-sm">Commently</span>
+          </Link>
         </div>
       </header>
 
       <main className="max-w-3xl mx-auto px-6 py-14">
-        <h1 className="font-display text-3xl sm:text-4xl font-bold tracking-tight">{title}</h1>
-        <p className="text-sm text-muted mt-3">Last updated: {updatedAt}</p>
+        <h1 className="text-h1 tracking-tight font-bold">{title}</h1>
+        <p className="text-sm text-on-surface-variant mt-3">Last updated: {updatedAt}</p>
 
-        <div className="prose-legal mt-10 space-y-8 text-[15px] leading-7 text-ink/90">{children}</div>
+        <div className="mt-10 space-y-8 text-[15px] leading-7 text-on-surface/90">{children}</div>
       </main>
 
-      <footer className="border-t border-border">
-        <div className="max-w-3xl mx-auto px-6 py-8 text-sm text-muted flex flex-wrap gap-x-6 gap-y-2">
-          <Link to="/terms" className="hover:text-ink transition-colors">Terms of Service</Link>
-          <Link to="/privacy" className="hover:text-ink transition-colors">Privacy Policy</Link>
-          <Link to="/refund-policy" className="hover:text-ink transition-colors">Refund Policy</Link>
+      <footer className="border-t border-outline-variant">
+        <div className="max-w-3xl mx-auto px-6 py-8 text-sm text-on-surface-variant flex flex-wrap gap-x-6 gap-y-2">
+          <Link to="/terms" className="hover:text-primary transition-colors">Terms of Service</Link>
+          <Link to="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link>
+          <Link to="/refund-policy" className="hover:text-primary transition-colors">Refund Policy</Link>
         </div>
       </footer>
     </div>
@@ -42,8 +46,8 @@ export default function LegalLayout({ title, description, updatedAt, children })
 export function Section({ heading, children }) {
   return (
     <section>
-      <h2 className="font-display text-xl font-semibold mb-3">{heading}</h2>
-      <div className="space-y-3 text-muted">{children}</div>
+      <h2 className="text-h2 font-semibold mb-3">{heading}</h2>
+      <div className="space-y-3 text-on-surface-variant">{children}</div>
     </section>
   );
 }

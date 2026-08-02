@@ -1,216 +1,130 @@
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import {
-  ArrowRight, MessageSquare, CircleDot, Send, Users, Lock, Zap, BarChart3,
-  Check, ChevronDown, Instagram, ShieldCheck, Sparkles, Menu, X,
+  Zap, PlayCircle, Bot, Key, MessageSquare, BarChart3, Globe, AtSign, Share2,
+  Heart, Check, ChevronDown, ShieldCheck, Lock, Users,
 } from "lucide-react";
-import ThemeToggle from "../components/ThemeToggle.jsx";
 
 export default function Landing() {
   return (
-    <div className="min-h-screen bg-bg overflow-x-hidden">
+    <div className="bg-background text-on-surface min-h-screen selection:bg-primary selection:text-white overflow-x-hidden">
       <Helmet>
-        <title>Commently — Turn Instagram Comments Into DMs, Automatically</title>
-        <meta name="description" content="Commently turns Instagram comments, Story replies, and DMs into automatic, on-brand conversations — so every 'link please?' gets an instant reply, even while you sleep." />
+        <title>Commently | Industrial-Grade Instagram Automation</title>
+        <meta name="description" content="Trigger auto-replies and DMs based on Instagram comments, Story replies, and DMs. Move from manual engagement to 24/7 conversion." />
       </Helmet>
 
-      <Nav />
-      <Hero />
-      <TrustBar />
-      <Features />
-      <WhyDifferent />
-      <ComingSoon />
-      <Pricing />
-      <Faq />
-      <FinalCta />
+      <Header />
+      <main className="max-w-[1200px] mx-auto px-gutter">
+        <Hero />
+        <TrustBar />
+        <Features />
+        <HowItWorks />
+        <Pricing />
+        <WhyDifferent />
+        <FinalCta />
+      </main>
       <Footer />
     </div>
   );
 }
 
-// ── Nav ──────────────────────────────────────────────────────────────────
-
-function Nav() {
-  const [scrolled, setScrolled] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 8);
-    window.addEventListener("scroll", onScroll);
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
-  const navLinks = [
-    { href: "#features", label: "Features" },
-    { href: "#pricing", label: "Pricing" },
-    { href: "#faq", label: "FAQ" },
-  ];
-
+function Header() {
+  const [open, setOpen] = useState(false);
   return (
-    <header
-      className={`sticky top-0 z-50 transition-all ${
-        scrolled ? "bg-bg/80 backdrop-blur-md border-b border-border" : "border-b border-transparent"
-      }`}
-    >
-      <div className="max-w-6xl mx-auto px-5 sm:px-6 h-16 flex items-center justify-between">
-        <Link to="/" className="font-display text-xl font-bold tracking-tight flex items-center gap-2">
-          <span className="w-7 h-7 rounded-lg bg-gold flex items-center justify-center text-white">
-            <MessageSquare size={15} />
-          </span>
-          Commently
-        </Link>
-
-        <nav className="hidden md:flex items-center gap-8">
-          {navLinks.map((l) => (
-            <a key={l.href} href={l.href} className="text-sm font-medium text-muted hover:text-ink transition-colors">
-              {l.label}
-            </a>
-          ))}
-        </nav>
-
-        <div className="hidden md:flex items-center gap-2">
-          <ThemeToggle />
-          <Link to="/login" className="text-sm font-medium text-muted hover:text-ink transition-colors px-3 py-2">
-            Log in
-          </Link>
-          <Link to="/login" className="btn-primary text-sm px-4 py-2 flex items-center gap-1.5">
-            Start free <ArrowRight size={15} />
+    <header className="flex justify-between items-center px-gutter w-full sticky top-0 z-50 bg-background/80 backdrop-blur-md h-16 border-b border-outline-variant">
+      <div className="max-w-[1200px] w-full mx-auto flex items-center justify-between">
+        <div className="flex items-center gap-8">
+          <span className="text-h2 font-black tracking-tighter">Commently</span>
+          <nav className="hidden md:flex items-center gap-6">
+            <a className="text-label-sm text-on-surface-variant hover:text-primary transition-colors" href="#features">Features</a>
+            <a className="text-label-sm text-on-surface-variant hover:text-primary transition-colors" href="#pricing">Pricing</a>
+            <a className="text-label-sm text-on-surface-variant hover:text-primary transition-colors" href="#faq">FAQ</a>
+          </nav>
+        </div>
+        <div className="hidden sm:flex items-center gap-4">
+          <Link className="text-label-sm text-on-surface-variant hover:text-white transition-colors px-4 py-2" to="/login">Login</Link>
+          <Link to="/login" className="bg-primary text-white text-label-sm px-5 py-2.5 rounded-lg font-semibold hover:brightness-110 active:scale-95 transition-all">
+            Get Started
           </Link>
         </div>
-
-        <button className="md:hidden text-muted" onClick={() => setMobileOpen((o) => !o)} aria-label="Menu">
-          {mobileOpen ? <X size={22} /> : <Menu size={22} />}
+        <button className="sm:hidden text-on-surface-variant" onClick={() => setOpen((o) => !o)}>
+          <ChevronDown className={`transition-transform ${open ? "rotate-180" : ""}`} />
         </button>
       </div>
-
-      {mobileOpen && (
-        <div className="md:hidden border-t border-border bg-bg px-5 py-4 space-y-3">
-          {navLinks.map((l) => (
-            <a key={l.href} href={l.href} onClick={() => setMobileOpen(false)} className="block text-sm font-medium text-muted py-1">
-              {l.label}
-            </a>
-          ))}
-          <div className="flex items-center gap-2 pt-2">
-            <Link to="/login" className="flex-1 btn-secondary text-sm text-center">Log in</Link>
-            <Link to="/login" className="flex-1 btn-primary text-sm text-center">Start free</Link>
-          </div>
+      {open && (
+        <div className="sm:hidden absolute top-16 left-0 right-0 bg-surface border-b border-outline-variant p-4 flex flex-col gap-3">
+          <a href="#features" onClick={() => setOpen(false)} className="text-sm text-on-surface-variant">Features</a>
+          <a href="#pricing" onClick={() => setOpen(false)} className="text-sm text-on-surface-variant">Pricing</a>
+          <Link to="/login" className="btn-secondary text-center text-sm">Login</Link>
+          <Link to="/login" className="btn-primary text-center text-sm">Get Started</Link>
         </div>
       )}
     </header>
   );
 }
 
-// ── Hero ─────────────────────────────────────────────────────────────────
-
 function Hero() {
   return (
-    <section className="max-w-6xl mx-auto px-5 sm:px-6 pt-14 sm:pt-20 pb-16 sm:pb-24">
-      <div className="grid md:grid-cols-2 gap-12 md:gap-8 items-center">
-        <div className="animate-fade-up">
-          <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-gold-bright bg-gold/10 px-3 py-1.5 rounded-full mb-5">
-            <Sparkles size={13} /> Built on Meta's official Instagram API
-          </div>
-          <h1 className="font-display text-[2.5rem] sm:text-5xl lg:text-[3.4rem] font-bold tracking-tight leading-[1.08]">
-            Turn every comment into a conversation
+    <section className="grid md:grid-cols-12 gap-stack-lg items-center pt-16 sm:pt-24 pb-section-gap">
+      <div className="md:col-span-6 space-y-stack-lg">
+        <div className="space-y-stack-md">
+          <span className="inline-flex items-center px-3 py-1 rounded-full bg-secondary-container/30 border border-outline-variant text-primary text-label-sm">
+            <Zap size={13} className="mr-2" />
+            Built on Meta's official Instagram API
+          </span>
+          <h1 className="text-[40px] sm:text-[56px] md:text-display-xl tracking-tighter leading-[1.05] font-bold">
+            Automate Instagram engagement with Commently.
           </h1>
-          <p className="text-lg text-muted mt-5 max-w-md leading-relaxed">
-            Commently replies to comments, Story replies, and DMs the moment they happen —
-            with the right message, to the right person, without you touching your phone.
+          <p className="text-body-lg text-on-surface-variant max-w-lg">
+            Trigger auto-replies and DMs from comments, Story replies, and DMs. Move from manual engagement to 24/7 conversion.
           </p>
-
-          <div className="flex flex-col sm:flex-row gap-3 mt-8">
-            <Link to="/login" className="btn-primary flex items-center justify-center gap-2 text-[15px] px-6 py-3">
-              Start free <ArrowRight size={17} />
-            </Link>
-            <a href="#features" className="btn-secondary flex items-center justify-center gap-2 text-[15px] px-6 py-3">
-              See how it works
-            </a>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mt-7 text-sm text-muted">
-            <span className="flex items-center gap-1.5"><Check size={15} className="text-mint" /> No credit card to start</span>
-            <span className="flex items-center gap-1.5"><Check size={15} className="text-mint" /> Cancel anytime</span>
-          </div>
         </div>
+        <div className="flex flex-col sm:flex-row gap-4 pt-4">
+          <Link to="/login" className="bg-primary text-white text-body-md px-8 py-4 rounded-lg font-bold hover:brightness-110 transition-all active:scale-95 text-center">
+            Get Started — It's Free
+          </Link>
+          <a href="#how" className="bg-surface-container-high border border-outline-variant text-white text-body-md px-8 py-4 rounded-lg font-bold hover:bg-surface-container-highest transition-all active:scale-95 flex items-center justify-center gap-2">
+            <PlayCircle size={19} />
+            See how it works
+          </a>
+        </div>
+      </div>
 
-        <div className="animate-fade-up" style={{ animationDelay: "120ms" }}>
-          <CommentToDmDemo />
+      <div className="md:col-span-6 relative mt-12 md:mt-0">
+        <div className="absolute -inset-4 bg-primary/10 blur-[120px] rounded-full" aria-hidden="true" />
+        <div className="relative glass-card rounded-2xl p-6 overflow-hidden shadow-2xl">
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-surface-container-highest border border-outline-variant flex items-center justify-center">
+                <Bot size={18} className="text-primary" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-white leading-none">IG Workflow</p>
+                <p className="text-[10px] text-on-surface-variant">Active automation</p>
+              </div>
+            </div>
+            <span className="bg-primary/20 text-primary text-[10px] font-bold px-2 py-1 rounded border border-primary/30">LIVE</span>
+          </div>
+
+          <div className="space-y-6">
+            <div className="bg-surface-container rounded-lg p-4 border-l-4 border-primary">
+              <p className="font-mono text-xs text-on-surface-variant mb-1 uppercase tracking-widest">Trigger</p>
+              <p className="text-white font-medium">Comment contains "link"</p>
+            </div>
+            <div className="flex justify-center -my-2 relative z-10">
+              <div className="w-px h-8 bg-gradient-to-b from-primary to-transparent" />
+            </div>
+            <div className="bg-surface-container rounded-lg p-4 border-l-4 border-primary">
+              <p className="font-mono text-xs text-on-surface-variant mb-1 uppercase tracking-widest">Action</p>
+              <p className="text-white font-medium">Send DM with the link</p>
+            </div>
+          </div>
         </div>
       </div>
     </section>
   );
 }
-
-// Signature element: a self-playing loop showing the product's core
-// mechanic — a comment arrives, Commently catches the keyword, and a DM
-// goes out — instead of a generic dashboard screenshot or stock photo.
-function CommentToDmDemo() {
-  const [step, setStep] = useState(0);
-  const timerRef = useRef(null);
-
-  useEffect(() => {
-    const steps = [0, 1, 2, 3];
-    let i = 0;
-    timerRef.current = setInterval(() => {
-      i = (i + 1) % (steps.length + 1); // +1 for a pause on the final state
-      setStep(steps[i] ?? 3);
-    }, 1600);
-    return () => clearInterval(timerRef.current);
-  }, []);
-
-  return (
-    <div className="relative mx-auto max-w-sm">
-      <div className="absolute -inset-6 bg-gold/10 blur-3xl rounded-full -z-10" aria-hidden="true" />
-      <div className="bg-panel border border-border rounded-2xl shadow-lifted p-5 sm:p-6">
-        <div className="flex items-center gap-2 pb-4 mb-4 border-b border-border">
-          <Instagram size={16} className="text-muted" />
-          <span className="text-sm font-medium text-muted">Live automation</span>
-          <span className="ml-auto flex items-center gap-1.5 text-xs text-mint font-medium">
-            <span className="w-1.5 h-1.5 rounded-full bg-mint animate-pulse" /> Active
-          </span>
-        </div>
-
-        {/* Incoming comment */}
-        <div className={`flex gap-2.5 mb-3 transition-opacity duration-300 ${step >= 0 ? "opacity-100" : "opacity-0"}`}>
-          <div className="w-8 h-8 rounded-full bg-panel2 flex items-center justify-center text-xs font-semibold text-muted shrink-0">
-            SP
-          </div>
-          <div className="bg-panel2 rounded-2xl rounded-tl-sm px-3.5 py-2 text-sm animate-bubble-in">
-            {step >= 0 && (
-              <>
-                Loved this reel!{" "}
-                <span className={step >= 1 ? "bg-gold/25 text-gold-bright rounded px-0.5 transition-colors duration-300" : ""}>
-                  link please 🙏
-                </span>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Keyword matched indicator */}
-        <div className={`flex items-center gap-2 text-xs text-gold-bright font-medium mb-3 pl-10 transition-all duration-300 ${step >= 1 ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-1"}`}>
-          <Zap size={12} /> Matched keyword "link" → automation triggered
-        </div>
-
-        {/* Outgoing DM */}
-        <div className={`flex justify-end mb-2 transition-all duration-300 ${step >= 2 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"}`}>
-          <div className="bg-gold text-white rounded-2xl rounded-br-sm px-3.5 py-2 text-sm max-w-[80%] animate-bubble-in">
-            Hey! Here's the link 👉 commently.app/demo
-          </div>
-        </div>
-
-        <div className={`flex justify-end transition-all duration-300 ${step >= 3 ? "opacity-100" : "opacity-0"}`}>
-          <span className="flex items-center gap-1 text-xs text-mint font-medium">
-            <Check size={13} /> Delivered in 0.4s
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Trust bar ────────────────────────────────────────────────────────────
 
 function TrustBar() {
   const items = [
@@ -219,50 +133,38 @@ function TrustBar() {
     { icon: Users, label: "Built by an agency, for agencies" },
   ];
   return (
-    <section className="border-y border-border bg-panel/40">
-      <div className="max-w-6xl mx-auto px-5 sm:px-6 py-6 flex flex-wrap items-center justify-center gap-x-10 gap-y-3">
+    <section className="pb-section-gap border-t border-outline-variant pt-12">
+      <div className="flex flex-wrap justify-center gap-x-10 gap-y-3">
         {items.map(({ icon: Icon, label }) => (
-          <div key={label} className="flex items-center gap-2 text-sm text-muted">
-            <Icon size={16} className="text-gold-bright" /> {label}
+          <div key={label} className="flex items-center gap-2 text-sm text-on-surface-variant">
+            <Icon size={16} className="text-primary" /> {label}
           </div>
         ))}
       </div>
     </section>
   );
 }
-
-// ── Features ─────────────────────────────────────────────────────────────
 
 function Features() {
-  const features = [
-    { icon: MessageSquare, title: "Comment automation", body: "Reply publicly and privately when a comment matches your keywords — on any post, or one you pick." },
-    { icon: CircleDot, title: "Story-reply automation", body: "Someone replies to your Story? They get an instant DM back, no manual checking required." },
-    { icon: Send, title: "DM automation", body: "Auto-reply to direct messages sent straight to your account, keyword by keyword." },
-    { icon: Lock, title: "Follow-gated replies", body: "Ask people to follow before you hand over the link — Commently checks, then releases the message." },
-    { icon: BarChart3, title: "Analytics & leads", body: "See exactly which keywords convert, who engaged, and how many DMs went out — in one dashboard." },
-    { icon: Users, title: "Multi-account", body: "Run automations across multiple Instagram accounts from a single login — built for agencies." },
+  const cards = [
+    { icon: Key, title: "Keyword Triggers", body: "Set specific words to trigger replies. Effortlessly filter high-intent comments from noise." },
+    { icon: MessageSquare, title: "Instant DM Replies", body: "Deliver links, magnets, or booking pages instantly — on comments, Story replies, and DMs." },
+    { icon: BarChart3, title: "Detailed Analytics", body: "Track conversion rates from a central dashboard. Understand which triggers drive results." },
   ];
-
   return (
-    <section id="features" className="max-w-6xl mx-auto px-5 sm:px-6 py-20 sm:py-28">
-      <div className="max-w-xl mb-14">
-        <div className="text-xs font-semibold text-gold-bright uppercase tracking-wide mb-3">What Commently does</div>
-        <h2 className="font-display text-3xl sm:text-4xl font-bold tracking-tight">
-          Everything that happens after someone comments
-        </h2>
-        <p className="text-muted mt-4 text-[15px] leading-relaxed">
-          One rule, set once: when this happens, send that. Commently handles the rest.
-        </p>
+    <section id="features" className="pb-section-gap scroll-mt-20">
+      <div className="text-center mb-16 space-y-stack-sm">
+        <h2 className="text-h1 text-white">Built for high-growth engagement</h2>
+        <p className="text-body-md text-on-surface-variant max-w-xl mx-auto">Scale your social presence without scaling your team's manual workload.</p>
       </div>
-
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-        {features.map(({ icon: Icon, title, body }) => (
-          <div key={title} className="card hover:border-gold/40 transition-colors">
-            <div className="w-10 h-10 rounded-lg bg-gold/10 flex items-center justify-center mb-4">
-              <Icon size={18} className="text-gold-bright" />
+      <div className="grid md:grid-cols-3 gap-6">
+        {cards.map(({ icon: Icon, title, body }) => (
+          <div key={title} className="bg-surface rounded-xl p-padding-card border border-outline-variant hover:border-primary/50 transition-all duration-300 group">
+            <div className="w-12 h-12 rounded-lg bg-surface-container-high flex items-center justify-center mb-6 border border-outline-variant group-hover:bg-primary/10 transition-colors">
+              <Icon size={20} className="text-primary" />
             </div>
-            <h3 className="font-semibold text-[15px] mb-1.5">{title}</h3>
-            <p className="text-sm text-muted leading-relaxed">{body}</p>
+            <h3 className="text-h2 text-white mb-3">{title}</h3>
+            <p className="text-body-md text-on-surface-variant">{body}</p>
           </div>
         ))}
       </div>
@@ -270,7 +172,88 @@ function Features() {
   );
 }
 
-// ── Why different ────────────────────────────────────────────────────────
+function HowItWorks() {
+  const steps = [
+    { n: 1, title: "Connect IG", body: "Securely link your professional account through Meta's official API." },
+    { n: 2, title: "Set Keywords", body: "Define trigger phrases for automated, personalized responses." },
+    { n: 3, title: "Automate", body: "Sit back while Commently handles every comment, reply, and DM in real time." },
+  ];
+  return (
+    <section id="how" className="pb-section-gap scroll-mt-20">
+      <div className="glass-card rounded-2xl p-8 sm:p-12 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-primary/5 to-transparent pointer-events-none" aria-hidden="true" />
+        <h2 className="text-h1 text-white mb-16 text-center relative">Seamless implementation</h2>
+        <div className="grid md:grid-cols-3 gap-12 relative">
+          {steps.map((s, i) => (
+            <div key={s.n} className="relative space-y-stack-md text-center">
+              <div className="w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center font-bold mx-auto mb-6 shadow-[0_0_20px_rgba(60,123,250,0.3)]">
+                {s.n}
+              </div>
+              <h4 className="text-h2 text-white">{s.title}</h4>
+              <p className="text-body-md text-on-surface-variant px-4">{s.body}</p>
+              {i < steps.length - 1 && (
+                <div className="hidden md:block absolute top-6 left-[calc(50%+2rem)] w-full h-px bg-outline-variant" />
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Pricing() {
+  const plans = [
+    { name: "Free", price: "₹0", period: "forever", features: ["1 Instagram account", "1 automation", "50 DMs / month", "Comment automation only"] },
+    { name: "Starter", price: "₹399", period: "/month", badge: "Most popular", highlight: true, features: ["1 Instagram account", "5 automations", "2,000 DMs / month", "Public replies + follow-gating", "Story-reply & DM automation"] },
+    { name: "Pro", price: "₹899", period: "/month", badge: "Best value per DM", features: ["5 Instagram accounts", "50 automations", "20,000 DMs / month", "Everything in Starter", "Analytics & leads dashboard"] },
+  ];
+  return (
+    <section id="pricing" className="pb-section-gap scroll-mt-20">
+      <div className="text-center mb-16 space-y-stack-sm">
+        <h2 className="text-h1 text-white">Simple plans, no surprises</h2>
+        <p className="text-body-md text-on-surface-variant max-w-xl mx-auto">Every plan includes a monthly DM limit — automations pause (not delete) if you hit it.</p>
+      </div>
+      <div className="grid md:grid-cols-3 gap-6 items-start">
+        {plans.map((plan) => (
+          <div
+            key={plan.name}
+            className={`rounded-2xl p-7 relative flex flex-col h-full ${
+              plan.highlight ? "bg-surface-container border-2 border-primary shadow-2xl md:-translate-y-3" : "bg-surface-container border border-outline-variant"
+            }`}
+          >
+            {plan.badge && (
+              <div className={`absolute -top-3 left-1/2 -translate-x-1/2 text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap ${plan.highlight ? "bg-primary text-white" : "bg-green-400/15 text-green-400"}`}>
+                {plan.badge}
+              </div>
+            )}
+            <h3 className="font-semibold text-lg text-white">{plan.name}</h3>
+            <div className="mt-5 flex items-baseline gap-1">
+              <span className="text-4xl font-bold text-white">{plan.price}</span>
+              <span className="text-sm text-on-surface-variant">{plan.period}</span>
+            </div>
+            <ul className="mt-6 space-y-2.5 flex-1">
+              {plan.features.map((f) => (
+                <li key={f} className="flex items-start gap-2.5 text-sm">
+                  <Check size={16} className="text-green-400 shrink-0 mt-0.5" />
+                  <span className="text-on-surface">{f}</span>
+                </li>
+              ))}
+            </ul>
+            <Link
+              to="/login"
+              className={`mt-7 text-center text-sm font-semibold px-5 py-3 rounded-lg transition-colors ${
+                plan.highlight ? "bg-primary text-white hover:brightness-110" : "border border-outline-variant text-white hover:border-primary hover:text-primary"
+              }`}
+            >
+              {plan.name === "Free" ? "Start free" : "Start free trial"}
+            </Link>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
 
 function WhyDifferent() {
   const points = [
@@ -280,260 +263,85 @@ function WhyDifferent() {
     { title: "Built by operators", body: "We run our own agency on Instagram. Commently is the tool we needed and couldn't find." },
   ];
   return (
-    <section className="bg-panel/40 border-y border-border">
-      <div className="max-w-6xl mx-auto px-5 sm:px-6 py-20 sm:py-24">
-        <div className="max-w-xl mb-14">
-          <div className="text-xs font-semibold text-gold-bright uppercase tracking-wide mb-3">Why Commently</div>
-          <h2 className="font-display text-3xl sm:text-4xl font-bold tracking-tight">Built differently, on purpose</h2>
-        </div>
-        <div className="grid sm:grid-cols-2 gap-x-10 gap-y-8">
-          {points.map((p) => (
-            <div key={p.title} className="flex gap-4">
-              <Check size={18} className="text-mint shrink-0 mt-0.5" />
-              <div>
-                <h3 className="font-semibold text-[15px] mb-1">{p.title}</h3>
-                <p className="text-sm text-muted leading-relaxed">{p.body}</p>
-              </div>
+    <section className="pb-section-gap">
+      <h2 className="text-h1 text-white mb-12">Why Commently</h2>
+      <div className="grid md:grid-cols-2 gap-x-10 gap-y-8">
+        {points.map((p) => (
+          <div key={p.title} className="bg-surface-container rounded-xl p-padding-card border border-outline-variant flex gap-4">
+            <Check size={18} className="text-green-400 shrink-0 mt-0.5" />
+            <div>
+              <h3 className="font-semibold text-white mb-1">{p.title}</h3>
+              <p className="text-sm text-on-surface-variant leading-relaxed">{p.body}</p>
             </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// ── Coming soon ──────────────────────────────────────────────────────────
-
-function ComingSoon() {
-  const upcoming = [
-    { title: "AI-powered dynamic replies", body: "Automations that write context-aware responses instead of a fixed template." },
-    { title: "Team seats", body: "Invite teammates or clients to manage automations without sharing logins." },
-    { title: "Zapier & webhook exports", body: "Push every lead straight into your CRM or spreadsheet as it comes in." },
-  ];
-  return (
-    <section className="max-w-6xl mx-auto px-5 sm:px-6 py-20 sm:py-24">
-      <div className="flex items-end justify-between flex-wrap gap-4 mb-10">
-        <div>
-          <div className="text-xs font-semibold text-gold-bright uppercase tracking-wide mb-3">On the roadmap</div>
-          <h2 className="font-display text-3xl sm:text-4xl font-bold tracking-tight">What's coming next</h2>
-        </div>
-      </div>
-      <div className="grid sm:grid-cols-3 gap-5">
-        {upcoming.map((u) => (
-          <div key={u.title} className="border border-dashed border-border rounded-xl2 p-6">
-            <div className="text-xs font-semibold text-muted uppercase tracking-wide mb-3">Coming soon</div>
-            <h3 className="font-semibold text-[15px] mb-1.5">{u.title}</h3>
-            <p className="text-sm text-muted leading-relaxed">{u.body}</p>
           </div>
         ))}
       </div>
     </section>
   );
 }
-
-// ── Pricing ──────────────────────────────────────────────────────────────
-
-function Pricing() {
-  const plans = [
-    {
-      name: "Free",
-      price: "₹0",
-      period: "forever",
-      tagline: "Try it on one account",
-      cta: "Start free",
-      features: ["1 Instagram account", "1 automation", "50 DMs / month", "Comment automation only"],
-      highlight: false,
-    },
-    {
-      name: "Starter",
-      price: "₹399",
-      period: "/month",
-      tagline: "For active creators",
-      cta: "Start free trial",
-      features: ["1 Instagram account", "5 automations", "2,000 DMs / month", "Public replies + follow-gating", "Story-reply & DM automation"],
-      highlight: true,
-      badge: "Most popular",
-    },
-    {
-      name: "Pro",
-      price: "₹899",
-      period: "/month",
-      tagline: "For agencies & multi-account",
-      cta: "Start free trial",
-      features: ["5 Instagram accounts", "50 automations", "20,000 DMs / month", "Everything in Starter", "Analytics & leads dashboard"],
-      highlight: false,
-      badge: "Best value per DM",
-    },
-  ];
-
-  return (
-    <section id="pricing" className="max-w-6xl mx-auto px-5 sm:px-6 py-20 sm:py-28">
-      <div className="text-center max-w-xl mx-auto mb-14">
-        <div className="text-xs font-semibold text-gold-bright uppercase tracking-wide mb-3">Pricing</div>
-        <h2 className="font-display text-3xl sm:text-4xl font-bold tracking-tight">Simple plans, no surprises</h2>
-        <p className="text-muted mt-4 text-[15px]">
-          Every plan includes a monthly DM limit — automations pause (not delete) if you hit it, so nothing's lost.
-        </p>
-      </div>
-
-      <div className="grid md:grid-cols-3 gap-6 items-start">
-        {plans.map((plan) => (
-          <div
-            key={plan.name}
-            className={`rounded-2xl p-7 relative flex flex-col h-full ${
-              plan.highlight
-                ? "bg-panel border-2 border-gold shadow-lifted md:-translate-y-3"
-                : "bg-panel border border-border"
-            }`}
-          >
-            {plan.badge && (
-              <div
-                className={`absolute -top-3 left-1/2 -translate-x-1/2 text-xs font-semibold px-3 py-1 rounded-full whitespace-nowrap ${
-                  plan.highlight ? "bg-gold text-white" : "bg-mint/15 text-mint"
-                }`}
-              >
-                {plan.badge}
-              </div>
-            )}
-            <h3 className="font-semibold text-lg">{plan.name}</h3>
-            <p className="text-sm text-muted mt-1">{plan.tagline}</p>
-            <div className="mt-5 flex items-baseline gap-1">
-              <span className="font-display text-4xl font-bold">{plan.price}</span>
-              <span className="text-sm text-muted">{plan.period}</span>
-            </div>
-
-            <ul className="mt-6 space-y-2.5 flex-1">
-              {plan.features.map((f) => (
-                <li key={f} className="flex items-start gap-2.5 text-sm">
-                  <Check size={16} className="text-mint shrink-0 mt-0.5" />
-                  <span className="text-ink/90">{f}</span>
-                </li>
-              ))}
-            </ul>
-
-            <Link
-              to="/login"
-              className={`mt-7 text-center text-sm font-semibold px-5 py-3 rounded-lg transition-colors ${
-                plan.highlight
-                  ? "bg-gold text-white hover:bg-gold-bright"
-                  : "border border-border text-ink hover:border-gold hover:text-gold-bright"
-              }`}
-            >
-              {plan.cta}
-            </Link>
-          </div>
-        ))}
-      </div>
-
-      <p className="text-center text-sm text-muted mt-10">
-        Need more than 5 accounts or 20,000 DMs/month?{" "}
-        <a href="mailto:sales@commently.app" className="text-gold-bright hover:underline">Talk to us</a> about a custom plan.
-      </p>
-    </section>
-  );
-}
-
-// ── FAQ ──────────────────────────────────────────────────────────────────
-
-function Faq() {
-  const items = [
-    { q: "Is this against Instagram's rules?", a: "No. Commently connects through Meta's official Instagram API — the same one used by tools like ManyChat. You authorize access, and you can revoke it anytime from your dashboard or Instagram settings." },
-    { q: "Do I need a Business or Creator account?", a: "Yes — Instagram's automation API only works with Business or Creator accounts. Switching is free and takes about 30 seconds in the Instagram app." },
-    { q: "What happens if I hit my monthly DM limit?", a: "Automations pause until your next billing cycle, or you can upgrade instantly to keep them running. No messages are lost or queued incorrectly — they simply stop firing until the limit resets." },
-    { q: "Can I cancel anytime?", a: "Yes, from Billing → Manage Subscription. You keep access through the end of your current billing period, no questions asked." },
-    { q: "Is my Instagram access token safe?", a: "Yes — tokens are encrypted at rest (AES-256) and are never visible in plain text, including to our own team. See our Privacy Policy for details." },
-  ];
-  const [open, setOpen] = useState(0);
-
-  return (
-    <section id="faq" className="max-w-3xl mx-auto px-5 sm:px-6 py-20 sm:py-28">
-      <div className="text-center mb-12">
-        <div className="text-xs font-semibold text-gold-bright uppercase tracking-wide mb-3">FAQ</div>
-        <h2 className="font-display text-3xl sm:text-4xl font-bold tracking-tight">Questions, answered</h2>
-      </div>
-
-      <div className="space-y-2">
-        {items.map((item, i) => (
-          <div key={item.q} className="border border-border rounded-xl2 overflow-hidden">
-            <button
-              onClick={() => setOpen(open === i ? -1 : i)}
-              className="w-full flex items-center justify-between gap-4 px-5 py-4 text-left"
-            >
-              <span className="font-medium text-[15px]">{item.q}</span>
-              <ChevronDown
-                size={18}
-                className={`text-muted shrink-0 transition-transform ${open === i ? "rotate-180" : ""}`}
-              />
-            </button>
-            {open === i && <p className="px-5 pb-4 text-sm text-muted leading-relaxed">{item.a}</p>}
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-// ── Final CTA ────────────────────────────────────────────────────────────
 
 function FinalCta() {
   return (
-    <section className="max-w-6xl mx-auto px-5 sm:px-6 pb-24">
-      <div className="bg-gold rounded-3xl px-8 py-14 sm:py-20 text-center relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10" style={{ backgroundImage: "radial-gradient(circle at 20% 20%, white 0%, transparent 40%)" }} aria-hidden="true" />
-        <h2 className="font-display text-3xl sm:text-4xl font-bold text-white tracking-tight relative">
-          Stop replying to the same comment twice
-        </h2>
-        <p className="text-white/85 mt-4 max-w-md mx-auto relative">
-          Set it up in under 5 minutes. Your first 50 DMs a month are free.
-        </p>
-        <Link
-          to="/login"
-          className="inline-flex items-center gap-2 bg-white text-brand-deep font-semibold px-7 py-3.5 rounded-lg mt-8 hover:opacity-90 transition-opacity relative"
-        >
-          Start free <ArrowRight size={17} />
+    <section className="pb-section-gap">
+      <div className="bg-primary rounded-2xl p-10 sm:p-16 text-center relative overflow-hidden">
+        <div
+          className="absolute inset-0 opacity-10"
+          style={{ backgroundImage: "radial-gradient(circle at 2px 2px, white 1px, transparent 0)", backgroundSize: "24px 24px" }}
+          aria-hidden="true"
+        />
+        <h2 className="text-[36px] sm:text-display-lg text-white mb-6 relative z-10 font-bold">Ready to scale your engagement?</h2>
+        <p className="text-body-lg text-white/80 max-w-2xl mx-auto mb-10 relative z-10">Set it up in under 5 minutes. Your first 50 DMs a month are free.</p>
+        <Link to="/login" className="inline-block bg-white text-primary text-h2 px-12 py-5 rounded-lg font-black transition-all hover:scale-105 active:scale-95 relative z-10 shadow-xl">
+          Get Started
         </Link>
       </div>
     </section>
   );
 }
 
-// ── Footer ───────────────────────────────────────────────────────────────
-
 function Footer() {
   return (
-    <footer className="border-t border-border">
-      <div className="max-w-6xl mx-auto px-5 sm:px-6 py-12 grid sm:grid-cols-2 md:grid-cols-4 gap-8">
-        <div>
-          <div className="font-display text-lg font-bold mb-2">Commently</div>
-          <p className="text-sm text-muted leading-relaxed">Instagram automation for creators and agencies.</p>
-        </div>
-        <div>
-          <div className="text-xs font-semibold text-muted uppercase tracking-wide mb-3">Product</div>
-          <div className="space-y-2 text-sm">
-            <a href="#features" className="block text-muted hover:text-ink transition-colors">Features</a>
-            <a href="#pricing" className="block text-muted hover:text-ink transition-colors">Pricing</a>
-            <a href="#faq" className="block text-muted hover:text-ink transition-colors">FAQ</a>
+    <footer className="bg-surface-container border-t border-outline-variant py-16 sm:py-20">
+      <div className="max-w-[1200px] mx-auto px-gutter grid sm:grid-cols-2 md:grid-cols-4 gap-10 sm:gap-12">
+        <div className="space-y-6">
+          <span className="text-h2 font-black tracking-tighter text-white">Commently</span>
+          <p className="text-label-sm text-on-surface-variant leading-relaxed">
+            Instagram automation for high-growth creators and agencies.
+          </p>
+          <div className="flex gap-4">
+            {[Globe, AtSign, Share2].map((Icon, i) => (
+              <a key={i} className="w-10 h-10 rounded bg-surface border border-outline-variant flex items-center justify-center hover:text-primary transition-colors" href="#">
+                <Icon size={18} />
+              </a>
+            ))}
           </div>
         </div>
         <div>
-          <div className="text-xs font-semibold text-muted uppercase tracking-wide mb-3">Legal</div>
-          <div className="space-y-2 text-sm">
-            <Link to="/terms" className="block text-muted hover:text-ink transition-colors">Terms of Service</Link>
-            <Link to="/privacy" className="block text-muted hover:text-ink transition-colors">Privacy Policy</Link>
-            <Link to="/refund-policy" className="block text-muted hover:text-ink transition-colors">Refund Policy</Link>
-          </div>
+          <h5 className="text-white font-bold mb-6">Product</h5>
+          <ul className="space-y-4 text-label-sm text-on-surface-variant">
+            <li><a className="hover:text-primary transition-colors" href="#features">Features</a></li>
+            <li><a className="hover:text-primary transition-colors" href="#pricing">Pricing</a></li>
+            <li><a className="hover:text-primary transition-colors" href="#faq">FAQ</a></li>
+          </ul>
         </div>
         <div>
-          <div className="text-xs font-semibold text-muted uppercase tracking-wide mb-3">Contact</div>
-          <div className="space-y-2 text-sm text-muted">
-            <p>support@commently.app</p>
-          </div>
+          <h5 className="text-white font-bold mb-6">Legal</h5>
+          <ul className="space-y-4 text-label-sm text-on-surface-variant">
+            <li><Link className="hover:text-primary transition-colors" to="/terms">Terms of Service</Link></li>
+            <li><Link className="hover:text-primary transition-colors" to="/privacy">Privacy Policy</Link></li>
+            <li><Link className="hover:text-primary transition-colors" to="/refund-policy">Refund Policy</Link></li>
+          </ul>
+        </div>
+        <div>
+          <h5 className="text-white font-bold mb-6">Contact</h5>
+          <p className="text-label-sm text-on-surface-variant">support@commently.app</p>
         </div>
       </div>
-      <div className="border-t border-border">
-        <div className="max-w-6xl mx-auto px-5 sm:px-6 py-5 text-xs text-muted">
-          © 2026 Commently. Not affiliated with or endorsed by Meta or Instagram.
-        </div>
+      <div className="max-w-[1200px] mx-auto px-gutter mt-16 pt-8 border-t border-outline-variant flex flex-col md:flex-row justify-between items-center gap-4">
+        <p className="text-label-sm text-on-surface-variant">© 2026 Commently. Not affiliated with or endorsed by Meta or Instagram.</p>
+        <p className="text-label-sm text-on-surface-variant flex items-center gap-2">
+          Built for Instagram <Heart size={14} className="text-primary fill-primary" />
+        </p>
       </div>
     </footer>
   );

@@ -11,7 +11,9 @@ export default function PhonePreview({ username = "your_account", keyword, dmMes
   return (
     <div className="sticky top-8">
       <div className="text-xs text-muted uppercase tracking-wide mb-3 text-center">Live Preview</div>
-      <div className="w-[300px] mx-auto bg-black rounded-[36px] border-[6px] border-[#222] shadow-2xl overflow-hidden">
+      <div className="w-[300px] mx-auto bg-black rounded-[44px] border-[8px] border-surface-container-highest shadow-2xl overflow-hidden relative ring-1 ring-white/10">
+        {/* Notch */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-5 bg-black rounded-b-2xl z-30" />
         {/* Status bar */}
         <div className="flex items-center justify-between px-5 pt-3 pb-1 text-white text-[11px]">
           <span>9:41</span>

@@ -1,28 +1,10 @@
-import { useEffect, useState } from "react";
 import Skeleton, { SkeletonTheme } from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 
-// Reads the live --panel2 / --border CSS variables so skeletons match
-// whichever theme (light/dark) is currently active, instead of being
-// hardcoded to one palette.
-function useSkeletonColors() {
-  const [colors, setColors] = useState({ base: "#15213a", highlight: "#1c2a48" });
-
-  useEffect(() => {
-    const styles = getComputedStyle(document.documentElement);
-    const base = styles.getPropertyValue("--panel2").trim() || colors.base;
-    const highlight = styles.getPropertyValue("--border").trim() || colors.highlight;
-    setColors({ base, highlight });
-  }, [document.documentElement.className]);
-
-  return colors;
-}
-
-// Wraps children with Commently's current theme colors for consistent skeleton styling
+// New design is dark-only (matches surface-container-high / outline-variant)
 export function SkeletonProvider({ children }) {
-  const { base, highlight } = useSkeletonColors();
   return (
-    <SkeletonTheme baseColor={base} highlightColor={highlight}>
+    <SkeletonTheme baseColor="#161718" highlightColor="#23252A">
       {children}
     </SkeletonTheme>
   );

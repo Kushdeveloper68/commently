@@ -1,22 +1,16 @@
 import { useEffect, useState } from "react";
-import { Check } from "lucide-react";
+import { Check, Download, Star, Info } from "lucide-react";
 import toast from "react-hot-toast";
+import Skeleton from "react-loading-skeleton";
 import AppLayout from "../components/AppLayout.jsx";
+import { SkeletonProvider } from "../components/Skeletons.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import api from "../api/axios.js";
 
 const PLAN_DISPLAY = {
-  free: { label: "Free", price: "₹0", features: ["1 Instagram account", "50 DMs/month", "1 automation"] },
-  starter: {
-    label: "Starter",
-    price: "₹399/mo",
-    features: ["1 Instagram account", "2,000 DMs/month", "5 automations", "Public replies", "Follow-gating"],
-  },
-  pro: {
-    label: "Pro",
-    price: "₹899/mo",
-    features: ["5 Instagram accounts", "20,000 DMs/month", "Unlimited automations", "Analytics dashboard"],
-  },
+  free: { label: "Free", price: "₹0", period: "forever", tagline: "Try it on one account", features: ["1 Instagram account", "1 automation", "50 DMs / month", "Comment automation only"] },
+  starter: { label: "Starter", price: "₹399", period: "/mo", tagline: "For growing creators", features: ["1 Instagram account", "5 automations", "2,000 DMs / month", "Public replies + follow-gating", "Story-reply & DM automation"] },
+  pro: { label: "Pro", price: "₹899", period: "/mo", tagline: "For agencies & multi-account", featured: true, features: ["5 Instagram accounts", "50 automations", "20,000 DMs / month", "Everything in Starter", "Analytics & leads dashboard"] },
 };
 
 export default function Billing() {
@@ -24,17 +18,22 @@ export default function Billing() {
   const [loadingPlan, setLoadingPlan] = useState(null);
   const [cancelling, setCancelling] = useState(false);
   const [cancelInfo, setCancelInfo] = useState(null);
+  const [limits, setLimits] = useState(null);
+  const [accountCount, setAccountCount] = useState(0);
+  const [history, setHistory] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (user?.plan !== "free") {
-      api
-        .get("/billing/history")
-        .then(({ data }) => {
-          const active = data.subscriptions.find((s) => s.status === "active");
-          if (active) setCancelInfo(active);
-        })
-        .catch(() => {});
-    }
+    Promise.all([api.get("/billing/plans"), api.get("/instagram/accounts"), api.get("/billing/history")])
+      .then(([plans, accounts, hist]) => {
+        setLimits(plans.data.plans[user?.plan]);
+        setAccountCount(accounts.data.accounts.length);
+        setHistory(hist.data.subscriptions);
+        const active = hist.data.subscriptions.find((s) => s.status === "active");
+        if (active) setCancelInfo(active);
+      })
+      .catch(() => toast.error("Couldn't load billing data"))
+      .finally(() => setLoading(false));
   }, [user?.plan]);
 
   const handleCancel = async () => {
@@ -62,7 +61,6 @@ export default function Billing() {
     setLoadingPlan(plan);
     try {
       const { data } = await api.post("/billing/create-order", { plan });
-
       const razorpay = new window.Razorpay({
         key: data.keyId,
         amount: data.amount,
@@ -70,7 +68,7 @@ export default function Billing() {
         order_id: data.orderId,
         name: "Commently",
         description: `${PLAN_DISPLAY[plan].label} Plan Subscription`,
-        theme: { color: "#2954ff" },
+        theme: { color: "#3C7BFA" },
         handler: async (response) => {
           try {
             await api.post("/billing/verify", {
@@ -93,75 +91,198 @@ export default function Billing() {
     }
   };
 
+  const dmPct = limits ? Math.min(100, Math.round(((user?.dmsSentThisMonth || 0) / limits.maxDmsPerMonth) * 100)) : 0;
+  const accountPct = limits ? Math.min(100, Math.round((accountCount / limits.maxInstagramAccounts) * 100)) : 0;
+
   return (
     <AppLayout>
-      <div className="mb-8">
-        <h1 className="font-display text-3xl font-bold">Billing</h1>
-        <p className="text-muted mt-1">
-          You're currently on the <span className="text-gold-bright capitalize font-medium">{user?.plan}</span> plan.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-3 gap-6">
-        {Object.entries(PLAN_DISPLAY).map(([key, plan]) => {
-          const isCurrent = user?.plan === key;
-          return (
-            <div key={key} className={`card ${isCurrent ? "border-gold" : ""}`}>
-              <div className="text-sm text-muted">{plan.label}</div>
-              <div className="font-display text-3xl font-bold text-gold-bright mt-1">{plan.price}</div>
-              <ul className="mt-4 space-y-2 mb-6">
-                {plan.features.map((f) => (
-                  <li key={f} className="flex items-center gap-2 text-sm text-muted">
-                    <Check size={14} className="text-gold" /> {f}
-                  </li>
-                ))}
-              </ul>
-              {isCurrent ? (
-                <button disabled className="btn-secondary w-full opacity-50">
-                  Current plan
-                </button>
-              ) : key === "free" ? (
-                <button disabled className="btn-secondary w-full opacity-50">
-                  Downgrade not available
-                </button>
-              ) : (
-                <button
-                  onClick={() => handleUpgrade(key)}
-                  disabled={loadingPlan === key}
-                  className="btn-primary w-full"
-                >
-                  {loadingPlan === key ? "Loading..." : `Upgrade to ${plan.label}`}
-                </button>
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      {user?.plan !== "free" && (
-        <div className="card mt-6 max-w-lg">
-          <h3 className="font-semibold mb-1">Manage subscription</h3>
-          {cancelInfo?.autoRenew === false ? (
-            <p className="text-sm text-muted">
-              Your plan is cancelled and will move to Free on{" "}
-              {new Date(cancelInfo.periodEnd).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}.
-            </p>
-          ) : (
-            <>
-              <p className="text-sm text-muted mb-4">
-                Cancelling stops future renewal — you keep access through the end of your current period.
-              </p>
-              <button
-                onClick={handleCancel}
-                disabled={cancelling}
-                className="text-sm font-medium text-danger hover:underline disabled:opacity-50"
-              >
-                {cancelling ? "Cancelling..." : "Cancel subscription"}
-              </button>
-            </>
-          )}
+      <SkeletonProvider>
+        <div className="mb-10">
+          <h1 className="text-h1 text-on-surface">Billing &amp; Plans</h1>
+          <p className="text-body-md text-on-surface-variant mt-2">Manage your subscription, usage, and invoices from one place.</p>
         </div>
-      )}
+
+        {/* Current plan + usage */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-gutter mb-12">
+          <div className="lg:col-span-5 bg-surface-container border border-outline-variant rounded-xl p-padding-card flex flex-col justify-between hover:border-primary transition-colors">
+            {loading ? (
+              <Skeleton height={140} />
+            ) : (
+              <>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <span className="bg-primary/10 text-primary text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-widest border border-primary/20">Current Plan</span>
+                      <h3 className="text-h2 mt-3 capitalize">{PLAN_DISPLAY[user?.plan]?.label}</h3>
+                      <p className="text-body-md text-on-surface-variant">{PLAN_DISPLAY[user?.plan]?.price} {PLAN_DISPLAY[user?.plan]?.period}</p>
+                    </div>
+                    {user?.plan !== "free" && (
+                      <div className="flex items-center gap-2 text-primary">
+                        <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                        <span className="text-label-sm font-bold uppercase tracking-wider">Active</span>
+                      </div>
+                    )}
+                  </div>
+                  {cancelInfo && (
+                    <div className="pt-4 border-t border-outline-variant/30">
+                      <p className="text-sm text-on-surface-variant">
+                        {cancelInfo.autoRenew === false ? (
+                          <>Moves to Free on <span className="text-on-surface font-semibold">{new Date(cancelInfo.periodEnd).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}</span></>
+                        ) : (
+                          <>Renews on <span className="text-on-surface font-semibold">{new Date(cancelInfo.periodEnd).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}</span></>
+                        )}
+                      </p>
+                    </div>
+                  )}
+                </div>
+                {user?.plan !== "free" && cancelInfo?.autoRenew !== false && (
+                  <button onClick={handleCancel} disabled={cancelling} className="mt-6 text-sm font-medium text-error hover:underline disabled:opacity-50 self-start">
+                    {cancelling ? "Cancelling..." : "Cancel subscription"}
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+
+          <div className="lg:col-span-7 bg-surface-container border border-outline-variant rounded-xl p-padding-card space-y-stack-lg">
+            <h4 className="text-[18px] font-semibold">Usage Metrics</h4>
+            {loading ? (
+              <Skeleton height={100} />
+            ) : (
+              <>
+                <div className="space-y-6">
+                  <UsageBar label="Monthly DMs Sent" current={user?.dmsSentThisMonth || 0} max={limits?.maxDmsPerMonth} pct={dmPct} />
+                  <UsageBar label="Instagram Accounts Connected" current={accountCount} max={limits?.maxInstagramAccounts} pct={accountPct} />
+                </div>
+                {dmPct >= 80 && (
+                  <div className="bg-primary/5 rounded-xl p-4 flex items-center gap-4 border border-primary/10">
+                    <Info size={18} className="text-primary shrink-0" />
+                    <p className="text-xs text-on-surface-variant leading-relaxed">
+                      You're close to your monthly DM limit — automations will pause once you hit it. Consider upgrading to avoid interruption.
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Plan comparison */}
+        <div className="space-y-stack-lg mb-12">
+          <div className="text-center space-y-2 max-w-xl mx-auto">
+            <h2 className="text-h1">Choose the right path</h2>
+            <p className="text-on-surface-variant">Simple plans, no surprises — automations pause (not delete) if you hit a limit.</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-gutter">
+            {Object.entries(PLAN_DISPLAY).map(([key, plan]) => {
+              const isCurrent = user?.plan === key;
+              return (
+                <div key={key} className={`bg-surface-container rounded-xl p-8 flex flex-col relative ${plan.featured ? "border-2 border-primary shadow-2xl shadow-primary/5" : "border border-outline-variant hover:border-outline transition-colors"}`}>
+                  {isCurrent && (
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-on-primary text-[10px] font-black px-4 py-1 rounded-full uppercase tracking-widest shadow-lg">Current Plan</div>
+                  )}
+                  <div className="mb-8">
+                    <h3 className={`font-bold uppercase tracking-widest text-[12px] ${plan.featured ? "text-primary" : "text-on-surface-variant"}`}>{plan.label}</h3>
+                    <div className="mt-4 flex items-baseline gap-1">
+                      <span className="text-4xl font-black text-on-surface">{plan.price}</span>
+                      <span className="text-on-surface-variant">{plan.period}</span>
+                    </div>
+                    <p className="mt-2 text-sm text-on-surface-variant">{plan.tagline}</p>
+                  </div>
+                  <ul className="space-y-4 flex-1">
+                    {plan.features.map((f) => (
+                      <li key={f} className="flex items-center gap-3 text-sm">
+                        <Check size={18} className="text-primary shrink-0" /> {f}
+                      </li>
+                    ))}
+                  </ul>
+                  {isCurrent ? (
+                    <div className="mt-8 w-full bg-primary/20 text-primary border border-primary/30 py-3 rounded-lg font-bold text-sm text-center">Active Now</div>
+                  ) : key === "free" ? (
+                    <button disabled className="mt-8 w-full bg-surface-container-high border border-outline-variant py-3 rounded-lg font-bold text-sm opacity-50 cursor-not-allowed">Downgrade not available</button>
+                  ) : (
+                    <button onClick={() => handleUpgrade(key)} disabled={loadingPlan === key} className="mt-8 w-full btn-primary py-3 rounded-lg font-bold text-sm">
+                      {loadingPlan === key ? "Loading..." : `Upgrade to ${plan.label}`}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Payments info + Invoice history */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
+          <section className="lg:col-span-4 bg-surface-container border border-outline-variant rounded-xl p-padding-card">
+            <h4 className="text-[18px] font-semibold mb-6">Payments</h4>
+            <div className="bg-surface-container-high border border-outline-variant p-4 rounded-xl flex items-center gap-4">
+              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                <Star size={18} className="text-primary" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-on-surface">Secured by Razorpay</p>
+                <p className="text-[11px] text-on-surface-variant">Cards, UPI, netbanking — no card details stored on our servers</p>
+              </div>
+            </div>
+          </section>
+
+          <section className="lg:col-span-8 bg-surface-container border border-outline-variant rounded-xl overflow-hidden">
+            <div className="p-padding-card border-b border-outline-variant bg-surface-container-low">
+              <h4 className="text-[18px] font-semibold">Invoice History</h4>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-surface-container-lowest/50">
+                    <th className="px-6 py-4 text-[12px] font-bold text-on-surface-variant uppercase tracking-wider">Date</th>
+                    <th className="px-6 py-4 text-[12px] font-bold text-on-surface-variant uppercase tracking-wider">Plan</th>
+                    <th className="px-6 py-4 text-[12px] font-bold text-on-surface-variant uppercase tracking-wider">Amount</th>
+                    <th className="px-6 py-4 text-[12px] font-bold text-on-surface-variant uppercase tracking-wider">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-outline-variant/30">
+                  {loading ? (
+                    <tr><td colSpan={4} className="px-6 py-4"><Skeleton height={40} /></td></tr>
+                  ) : history.length === 0 ? (
+                    <tr><td colSpan={4} className="px-6 py-10 text-center text-on-surface-variant text-sm">No invoices yet.</td></tr>
+                  ) : (
+                    history.map((h) => (
+                      <tr key={h._id} className="hover:bg-surface-container-high transition-colors">
+                        <td className="px-6 py-4 text-sm text-on-surface">{new Date(h.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</td>
+                        <td className="px-6 py-4 text-sm text-on-surface capitalize">{h.plan}</td>
+                        <td className="px-6 py-4 text-sm text-on-surface font-mono">₹{(h.amount / 100).toLocaleString("en-IN")}</td>
+                        <td className="px-6 py-4 text-sm">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
+                            h.status === "active" ? "bg-green-500/10 text-green-400 border-green-500/20" :
+                            h.status === "created" ? "bg-outline-variant text-on-surface-variant border-outline-variant" :
+                            "bg-error/10 text-error border-error/20"
+                          }`}>
+                            {h.status === "active" ? "Paid" : h.status === "created" ? "Pending" : h.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      </SkeletonProvider>
     </AppLayout>
+  );
+}
+
+function UsageBar({ label, current, max, pct }) {
+  return (
+    <div className="space-y-2">
+      <div className="flex justify-between items-end">
+        <span className="text-label-sm text-on-surface-variant">{label}</span>
+        <span className="font-mono text-sm text-on-surface">{current.toLocaleString("en-IN")} <span className="text-on-surface-variant">/ {max?.toLocaleString("en-IN")}</span></span>
+      </div>
+      <div className="h-2 w-full bg-surface-container-highest rounded-full overflow-hidden">
+        <div className={`h-full rounded-full transition-all ${pct >= 80 ? "bg-error" : "bg-primary"}`} style={{ width: `${pct}%` }} />
+      </div>
+    </div>
   );
 }

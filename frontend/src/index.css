@@ -2,55 +2,24 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  /* Dark theme (default) — deep navy instead of pure black, keeps the
-     "premium SaaS" feel without the gold/luxury connotation. Values are
-     R G B triplets (no commas, no rgb() wrapper) so Tailwind's opacity
-     modifiers like bg-gold/10 work via rgb(var(--x) / <alpha-value>). */
-  --bg: #0b1220;
-  --panel: #101a2e;
-  --panel2: #15213a;
-  --border: rgba(148, 163, 196, 0.14);
-  --brand: 41 84 255;
-  --brand-bright: 110 140 255;
-  --brand-deep: 19 42 130;
-  --mint: 34 197 139;
-  --ink: 238 241 248;
-  --muted: 136 146 166;
-  --danger: 240 100 95;
-  --success: 34 197 139;
-}
-
-.light {
-  --bg: #f7f8fc;
-  --panel: #ffffff;
-  --panel2: #f1f3f9;
-  --border: #e3e7f0;
-  --brand: 41 84 255;
-  --brand-bright: 27 63 224;
-  --brand-deep: 19 42 130;
-  --mint: 18 138 87;
-  --ink: 16 24 40;
-  --muted: 91 100 114;
-  --danger: 220 76 76;
-  --success: 18 138 87;
-}
-
 @layer base {
   html {
     scroll-behavior: smooth;
   }
   body {
-    @apply bg-bg text-ink font-sans antialiased;
-    transition: background-color 0.2s ease, color 0.2s ease;
+    @apply bg-background text-on-surface font-sans antialiased;
   }
   ::selection {
-    @apply bg-gold/25 text-ink;
+    @apply bg-primary/25 text-on-surface;
   }
   :focus-visible {
-    outline: 2px solid var(--brand);
+    outline: 2px solid #3C7BFA;
     outline-offset: 2px;
   }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: #08090A; }
+  ::-webkit-scrollbar-thumb { background: #23252A; border-radius: 10px; }
+  ::-webkit-scrollbar-thumb:hover { background: #3C7BFA; }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
       animation-duration: 0.001ms !important;
@@ -62,18 +31,29 @@
 
 @layer components {
   .card {
-    @apply bg-panel border border-border rounded-xl2 p-6 shadow-soft;
+    @apply bg-surface-container rounded-xl border border-outline-variant p-padding-card;
+  }
+  .glass-card {
+    background: rgba(15, 16, 17, 0.7);
+    backdrop-filter: blur(12px);
+    @apply border border-outline-variant;
   }
   .btn-primary {
-    @apply bg-gold text-white font-semibold px-5 py-2.5 rounded-lg hover:bg-gold-bright transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-soft;
+    @apply bg-primary text-on-primary font-bold px-5 py-2.5 rounded-lg hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed;
   }
   .btn-secondary {
-    @apply bg-transparent border border-border text-muted font-medium px-5 py-2.5 rounded-lg hover:border-gold hover:text-gold-bright transition-colors;
+    @apply bg-surface-container-highest border border-outline-variant text-on-surface font-bold px-5 py-2.5 rounded-lg hover:bg-outline-variant transition-colors;
+  }
+  .btn-outline {
+    @apply border border-primary text-primary text-label-sm px-4 py-1.5 rounded-lg hover:bg-primary/10 transition-colors;
   }
   .input-field {
-    @apply w-full bg-panel2 border border-border text-ink px-4 py-2.5 rounded-lg focus:outline-none focus:border-gold transition-colors placeholder:text-muted/60;
+    @apply w-full bg-surface-container-lowest border border-outline rounded-lg px-4 py-2.5 text-on-surface focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all placeholder:text-on-surface-variant/60;
   }
   .label-sm {
-    @apply text-xs text-muted uppercase tracking-wide mb-1.5 block font-medium;
+    @apply text-label-sm text-on-surface-variant uppercase tracking-wide mb-1.5 block;
+  }
+  .badge {
+    @apply px-2 py-1 text-[10px] font-bold uppercase rounded;
   }
 }

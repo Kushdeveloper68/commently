@@ -5,51 +5,87 @@ export default {
   theme: {
     extend: {
       colors: {
-        bg: "var(--bg)",
-        panel: "var(--panel)",
-        panel2: "var(--panel2)",
-        border: "var(--border)",
-        // "gold" is a historical name from an earlier palette — kept as an
-        // alias so every existing page (Dashboard, Automations, Analytics,
-        // Billing, Sidebar, etc.) picks up the new trust-blue palette
-        // automatically via the CSS variables below, with zero JSX changes.
-        gold: {
-          DEFAULT: "rgb(var(--brand) / <alpha-value>)",
-          bright: "rgb(var(--brand-bright) / <alpha-value>)",
-        },
-        brand: {
-          DEFAULT: "rgb(var(--brand) / <alpha-value>)",
-          bright: "rgb(var(--brand-bright) / <alpha-value>)",
-          deep: "rgb(var(--brand-deep) / <alpha-value>)",
-        },
-        mint: "rgb(var(--mint) / <alpha-value>)",
-        ink: "rgb(var(--ink) / <alpha-value>)",
-        muted: "rgb(var(--muted) / <alpha-value>)",
-        danger: "rgb(var(--danger) / <alpha-value>)",
-        success: "rgb(var(--success) / <alpha-value>)",
+        background: "#08090A",
+        surface: "#0F1011",
+        "surface-dim": "#11131b",
+        "surface-bright": "#373941",
+        "surface-container-lowest": "#050505",
+        "surface-container-low": "#0F1011",
+        "surface-container": "#0F1011",
+        "surface-container-high": "#161718",
+        "surface-container-highest": "#23252A",
+        "surface-variant": "#32343d",
+        "on-surface": "#e1e2ed",
+        "on-surface-variant": "#A0AEC0",
+        "on-background": "#e1e2ed",
+        outline: "#23252A",
+        "outline-variant": "#23252A",
+
+        primary: "#3C7BFA",
+        "on-primary": "#FFFFFF",
+        "primary-container": "#3C7BFA",
+        "on-primary-container": "#002663",
+
+        secondary: "#bac8da",
+        "on-secondary": "#243240",
+        "secondary-container": "#161718",
+        "on-secondary-container": "#acbacc",
+
+        tertiary: "#ffb68b",
+        "on-tertiary": "#522300",
+        "tertiary-container": "#e37117",
+        "on-tertiary-container": "#481e00",
+
+        error: "#ffb4ab",
+        "on-error": "#690005",
+        "error-container": "#93000a",
+        "on-error-container": "#ffdad6",
+
+        // Backward-compat aliases — old pages (pre-migration) still reference
+        // these names. Points them at the closest new-design equivalent so
+        // nothing renders unstyled while pages are migrated phase by phase.
+        // Safe to delete once every page below has been rebuilt.
+        bg: "#08090A",
+        panel: "#0F1011",
+        panel2: "#161718",
+        border: "#23252A",
+        gold: { DEFAULT: "#3C7BFA", bright: "#5B8FFF" },
+        ink: "#e1e2ed",
+        muted: "#A0AEC0",
+        danger: "#ffb4ab",
+        success: "#4ADE80",
       },
       fontFamily: {
-        display: ["'Instrument Sans'", "sans-serif"],
-        sans: ["'Manrope'", "sans-serif"],
-        mono: ["'IBM Plex Mono'", "monospace"],
+        sans: ["'Inter'", "sans-serif"],
+        mono: ["'JetBrains Mono'", "monospace"],
+      },
+      fontSize: {
+        h1: ["32px", { lineHeight: "40px", letterSpacing: "-0.02em", fontWeight: "600" }],
+        h2: ["24px", { lineHeight: "32px", letterSpacing: "-0.01em", fontWeight: "600" }],
+        "body-md": ["16px", { lineHeight: "24px", fontWeight: "400" }],
+        "body-lg": ["18px", { lineHeight: "28px", fontWeight: "400" }],
+        "display-lg": ["64px", { lineHeight: "1.1", letterSpacing: "-0.03em", fontWeight: "700" }],
+        "label-sm": ["13px", { lineHeight: "16px", letterSpacing: "0.02em", fontWeight: "500" }],
+        mono: ["14px", { lineHeight: "20px", fontWeight: "400" }],
+      },
+      spacing: {
+        gutter: "16px",
+        "padding-card": "24px",
+        "stack-xs": "4px",
+        "stack-sm": "8px",
+        "stack-md": "16px",
+        "stack-lg": "32px",
+        "section-gap": "96px",
       },
       borderRadius: {
-        xl2: "14px",
+        DEFAULT: "0.125rem",
+        lg: "0.25rem",
+        xl: "0.5rem",
+        "2xl": "0.75rem",
+        full: "9999px",
       },
       boxShadow: {
-        soft: "0 1px 2px rgba(16, 24, 40, 0.04), 0 1px 3px rgba(16, 24, 40, 0.06)",
-        card: "0 2px 8px rgba(16, 24, 40, 0.06), 0 1px 2px rgba(16, 24, 40, 0.04)",
-        lifted: "0 12px 32px -8px rgba(16, 24, 40, 0.18)",
-      },
-      keyframes: {
-        "fade-up": { "0%": { opacity: 0, transform: "translateY(12px)" }, "100%": { opacity: 1, transform: "translateY(0)" } },
-        "bubble-in": { "0%": { opacity: 0, transform: "scale(0.85) translateY(6px)" }, "100%": { opacity: 1, transform: "scale(1) translateY(0)" } },
-        float: { "0%,100%": { transform: "translateY(0)" }, "50%": { transform: "translateY(-6px)" } },
-      },
-      animation: {
-        "fade-up": "fade-up 0.6s cubic-bezier(0.16,1,0.3,1) both",
-        "bubble-in": "bubble-in 0.45s cubic-bezier(0.16,1,0.3,1) both",
-        float: "float 4s ease-in-out infinite",
+        glow: "0 0 20px rgba(60,123,250,0.08)",
       },
     },
   },
