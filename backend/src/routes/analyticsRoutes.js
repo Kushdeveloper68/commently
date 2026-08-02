@@ -7,6 +7,7 @@ import {
   getRecentActivity,
   getTimeseries,
   getLeads,
+  getTopPosts,
 } from "../controllers/analyticsController.js";
 
 const router = express.Router();
@@ -19,5 +20,6 @@ router.get("/keywords", getKeywordPerformance);
 router.get("/activity", getRecentActivity);
 router.get("/timeseries", getTimeseries);
 router.get("/leads", getLeads);
+router.get("/posts", getTopPosts);
 
 export default router;

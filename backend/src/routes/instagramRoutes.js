@@ -6,6 +6,7 @@ import {
   handleCallback,
   listAccounts,
   disconnectAccount,
+  syncAccount,
   handleDeauthorize,
   handleDataDeletionRequest,
   dataDeletionStatus,
@@ -18,6 +19,7 @@ router.get("/connect", requireAuth, enforceInstagramAccountLimit, initiateConnec
 router.get("/callback", handleCallback); // Meta redirects here directly, no auth header available
 router.get("/accounts", requireAuth, listAccounts);
 router.delete("/accounts/:id", requireAuth, disconnectAccount);
+router.post("/accounts/:id/sync", requireAuth, syncAccount);
 router.get("/accounts/:id/media", requireAuth, listMedia);
 
 // Called directly by Meta, not the frontend — no auth header available

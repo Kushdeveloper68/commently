@@ -8,6 +8,7 @@ import {
   updateAutomation,
   deleteAutomation,
   toggleAutomation,
+  duplicateAutomation,
 } from "../controllers/automationController.js";
 
 const router = express.Router();
@@ -17,6 +18,7 @@ router.use(requireAuth);
 router.get("/", listAutomations);
 router.get("/:id", getAutomation);
 router.post("/", enforceAutomationLimit, createAutomation);
+router.post("/:id/duplicate", duplicateAutomation);
 router.put("/:id", updateAutomation);
 router.delete("/:id", deleteAutomation);
 router.patch("/:id/toggle", toggleAutomation);

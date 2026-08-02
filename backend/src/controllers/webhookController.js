@@ -53,12 +53,13 @@ export async function handleWebhook(req, res) {
 // Shared bookkeeping: writes the InteractionLog and updates automation/user
 // stats. Used by all three channels (comment, story_reply, dm) so the
 // counting logic can't drift between them.
-async function logAndUpdateStats({ automation, user, channel, sourceId, commenterUsername, text, dmSent, dmError, recipientPsid, gateStatus }) {
+async function logAndUpdateStats({ automation, user, channel, sourceId, mediaId, commenterUsername, text, dmSent, dmError, recipientPsid, gateStatus }) {
   await InteractionLog.create({
     automation: automation._id,
     instagramAccount: automation.instagramAccount,
     channel,
     sourceId,
+    mediaId,
     commenterUsername,
     commentText: text,
     dmSent,
@@ -172,6 +173,7 @@ async function processComment(igBusinessId, value) {
     user,
     channel: "comment",
     sourceId: commentId,
+    mediaId,
     commenterUsername: fromUsername,
     text: value.text,
     dmSent,

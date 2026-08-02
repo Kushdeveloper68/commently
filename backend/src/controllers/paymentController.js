@@ -75,7 +75,7 @@ export async function verifyPayment(req, res) {
       planRenewsAt: subscription.periodEnd,
     });
 
-    sendEmailAsync(paymentReceiptEmail(req.user, subscription));
+    if (req.user.emailPreferences?.billingReceipts !== false) sendEmailAsync(paymentReceiptEmail(req.user, subscription));
 
     res.json({ success: true, plan: subscription.plan });
   } catch (err) {
@@ -153,7 +153,7 @@ export async function cancelSubscription(req, res) {
     subscription.cancelledAt = new Date();
     await subscription.save();
 
-    sendEmailAsync(subscriptionCancelledEmail(req.user, subscription));
+    if (req.user.emailPreferences?.billingReceipts !== false) sendEmailAsync(subscriptionCancelledEmail(req.user, subscription));
 
     res.json({
       success: true,

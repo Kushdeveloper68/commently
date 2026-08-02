@@ -4,10 +4,41 @@ import { getPlanLimits } from "../config/planLimits.js";
 
 // GET /api/automations
 export async function listAutomations(req, res) {
-  const automations = await Automation.find({ user: req.user._id }).sort({
-    createdAt: -1,
-  });
+  const automations = await Automation.find({ user: req.user._id })
+    .sort({ createdAt: -1 })
+    .populate("instagramAccount", "username profilePictureUrl");
   res.json({ automations });
+}
+
+// POST /api/automations/:id/duplicate — clones an automation as a new draft,
+// so users can quickly spin off variants without rebuilding from scratch.
+export async function duplicateAutomation(req, res) {
+  const original = await Automation.findOne({ _id: req.params.id, user: req.user._id });
+  if (!original) return res.status(404).json({ error: "Automation not found" });
+
+  const limits = getPlanLimits(req.user.plan);
+  const count = await Automation.countDocuments({ user: req.user._id });
+  if (count >= limits.maxAutomations) {
+    return res.status(403).json({
+      error: `Your ${req.user.plan} plan allows up to ${limits.maxAutomations} automations.`,
+      code: "PLAN_LIMIT_AUTOMATIONS",
+    });
+  }
+
+  const clone = await Automation.create({
+    user: original.user,
+    instagramAccount: original.instagramAccount,
+    name: `${original.name} (copy)`,
+    channel: original.channel,
+    trigger: original.trigger,
+    keywordMatch: original.keywordMatch,
+    publicReply: original.publicReply,
+    followGate: original.followGate,
+    dmReply: original.dmReply,
+    status: "draft",
+  });
+
+  res.status(201).json({ automation: clone });
 }
 
 // GET /api/automations/:id

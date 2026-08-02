@@ -7,6 +7,8 @@ const instagramAccountSchema = new mongoose.Schema(
     igBusinessId: { type: String, required: true, unique: true }, // Instagram-scoped account ID
     username: { type: String, required: true },
     profilePictureUrl: { type: String },
+    accountType: { type: String }, // "BUSINESS" | "MEDIA_CREATOR" — as reported by Instagram
+    followersCount: { type: Number },
 
     // Long-lived access token — encrypted at rest (see utils/crypto.js)
     accessTokenEncrypted: { type: String, required: true, select: false },

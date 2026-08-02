@@ -13,6 +13,11 @@ const userSchema = new mongoose.Schema(
     passwordHash: { type: String, select: false },
 
     role: { type: String, enum: ["user", "admin"], default: "user" },
+    timezone: { type: String, default: "Asia/Kolkata" },
+    emailPreferences: {
+      quotaAlerts: { type: Boolean, default: true }, // 80%/100% DM limit emails
+      billingReceipts: { type: Boolean, default: true }, // payment receipts + cancellation confirmation
+    },
 
     plan: {
       type: String,

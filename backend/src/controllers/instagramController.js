@@ -2,7 +2,7 @@ import crypto from "crypto";
 import InstagramAccount from "../models/InstagramAccount.js";
 import Automation from "../models/Automation.js";
 import InteractionLog from "../models/InteractionLog.js";
-import { encrypt } from "../utils/crypto.js";
+import { encrypt, decrypt } from "../utils/crypto.js";
 import { parseSignedRequest } from "../services/metaSignedRequest.js";
 import {
   getInstagramAuthUrl,
@@ -66,6 +66,8 @@ export async function handleCallback(req, res) {
         igBusinessId: profile.user_id,
         username: profile.username,
         profilePictureUrl: profile.profile_picture_url,
+        accountType: profile.account_type,
+        followersCount: profile.followers_count,
         accessTokenEncrypted: encrypt(longLived.access_token), // long-lived token store karo, short-lived nahi
         tokenExpiresAt: expiresAt, // ab REAL expiry (~60 din), koi hardcoded jhooth nahi
         isActive: true,
@@ -101,6 +103,34 @@ export async function disconnectAccount(req, res) {
   );
   if (!account) return res.status(404).json({ error: "Account not found" });
   res.json({ success: true });
+}
+
+// POST /api/instagram/accounts/:id/sync — re-fetches live profile data
+// (follower count, avatar, username) from Instagram on demand, so the
+// "Sync" button actually does something real instead of a fake spinner.
+export async function syncAccount(req, res) {
+  const account = await InstagramAccount.findOne({ _id: req.params.id, user: req.user._id }).select(
+    "+accessTokenEncrypted",
+  );
+  if (!account) return res.status(404).json({ error: "Account not found" });
+
+  try {
+    const token = decrypt(account.accessTokenEncrypted);
+    const profile = await getInstagramProfile(token);
+
+    account.username = profile.username;
+    account.profilePictureUrl = profile.profile_picture_url;
+    account.accountType = profile.account_type;
+    account.followersCount = profile.followers_count;
+    account.lastRefreshedAt = new Date();
+    account.needsReconnect = false;
+    await account.save();
+
+    res.json({ account });
+  } catch (err) {
+    console.error("Account sync failed:", err.response?.data || err.message);
+    res.status(502).json({ error: "Couldn't sync — the connection may need to be re-authorized." });
+  }
 }
 
 // POST /api/instagram/deauthorize — Meta calls this when a user removes

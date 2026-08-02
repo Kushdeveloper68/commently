@@ -102,6 +102,31 @@ export async function getMe(req, res) {
   res.json({ user: sanitizeUser(req.user) });
 }
 
+// PATCH /api/auth/profile — updates name and timezone (email is tied to the
+// Google account and can't be changed here)
+export async function updateProfile(req, res) {
+  const { name, timezone } = req.body;
+  const update = {};
+  if (name?.trim()) update.name = name.trim();
+  if (timezone) update.timezone = timezone;
+
+  const user = await User.findByIdAndUpdate(req.user._id, update, { new: true });
+  res.json({ user: sanitizeUser(user) });
+}
+
+// PATCH /api/auth/notification-preferences — actually gates whether quota
+// alert / billing receipt emails get sent (checked in usageAlerts.js and
+// paymentController.js), not just a decorative toggle.
+export async function updateNotificationPreferences(req, res) {
+  const { quotaAlerts, billingReceipts } = req.body;
+  const update = {};
+  if (typeof quotaAlerts === "boolean") update["emailPreferences.quotaAlerts"] = quotaAlerts;
+  if (typeof billingReceipts === "boolean") update["emailPreferences.billingReceipts"] = billingReceipts;
+
+  const user = await User.findByIdAndUpdate(req.user._id, update, { new: true });
+  res.json({ user: sanitizeUser(user) });
+}
+
 // DELETE /api/auth/account — permanent, cascades everything. Requires the
 // frontend to have already confirmed intent (e.g. "type DELETE to confirm").
 export async function deleteAccount(req, res) {
@@ -133,6 +158,10 @@ function sanitizeUser(user) {
     email: user.email,
     avatarUrl: user.avatarUrl,
     plan: user.plan,
+    planRenewsAt: user.planRenewsAt,
     role: user.role,
+    timezone: user.timezone,
+    dmsSentThisMonth: user.dmsSentThisMonth,
+    emailPreferences: user.emailPreferences,
   };
 }

@@ -10,6 +10,7 @@ const interactionLogSchema = new mongoose.Schema(
     // double-replying to the same event on webhook retries.
     channel: { type: String, enum: ["comment", "story_reply", "dm"], required: true, default: "comment" },
     sourceId: { type: String, required: true, unique: true },
+    mediaId: { type: String, index: true }, // Instagram post/Reel ID — only set for channel: "comment", powers the Top Engaged Posts breakdown
     commenterUsername: { type: String },
     commentText: { type: String }, // holds the comment text, story-reply text, or DM text depending on channel
 

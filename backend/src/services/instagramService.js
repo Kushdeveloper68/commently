@@ -64,7 +64,7 @@ export async function refreshLongLivedToken(currentToken) {
 export async function getInstagramProfile(accessToken) {
   const { data } = await axios.get(`${GRAPH_BASE}/me`, {
     params: {
-      fields: "id,user_id,username,profile_picture_url,account_type",
+      fields: "id,user_id,username,profile_picture_url,account_type,followers_count",
       access_token: accessToken,
     },
   });
@@ -97,6 +97,25 @@ export async function getRecentMedia(accessToken, limit = 12) {
     },
   });
   return data.data;
+}
+
+// Fetches a single post/Reel's details (thumbnail, caption) for the
+// Analytics "Top Engaged Posts" table. Returns null instead of throwing if
+// the post was deleted or the token can't see it — callers should degrade
+// gracefully (show a placeholder) rather than fail the whole table.
+export async function getMediaById(accessToken, mediaId) {
+  try {
+    const { data } = await axios.get(`${GRAPH_BASE}/${mediaId}`, {
+      params: {
+        fields: "id,caption,media_type,media_url,thumbnail_url,permalink",
+        access_token: accessToken,
+      },
+    });
+    return data;
+  } catch (err) {
+    console.error(`Could not fetch media ${mediaId}:`, err.response?.data?.error?.message || err.message);
+    return null;
+  }
 }
 
 export async function sendPrivateReply(accessToken, commentId, message) {

@@ -3,6 +3,8 @@ import Automation from "../models/Automation.js";
 import InteractionLog from "../models/InteractionLog.js";
 import Subscription from "../models/Subscription.js";
 import { getPlanLimits } from "../config/planLimits.js";
+import { decrypt } from "../utils/crypto.js";
+import { getMediaById } from "../services/instagramService.js";
 
 // Small helper: every analytics query is scoped to the logged-in user, but
 // InteractionLog only stores instagramAccount (not user directly) — so we
@@ -112,6 +114,89 @@ export async function getLeads(req, res) {
       lastInteractionAt: l.lastInteractionAt,
       lastAutomationName: l.lastAutomation?.name,
     })),
+    pagination: {
+      page,
+      limit,
+      total: totalResult[0]?.total || 0,
+      totalPages: Math.ceil((totalResult[0]?.total || 0) / limit),
+    },
+  });
+}
+
+// GET /api/analytics/posts?page=1&limit=10
+// Per-post breakdown for the "Top Engaged Posts" table — aggregates
+// comment-channel InteractionLogs by mediaId, then fetches each post's
+// thumbnail/caption live from Instagram (only for the current page, to
+// keep API calls bounded). Posts that fail to fetch (deleted, token issue)
+// degrade to a placeholder rather than breaking the table.
+export async function getTopPosts(req, res) {
+  const page = Math.max(1, parseInt(req.query.page) || 1);
+  const limit = Math.min(25, parseInt(req.query.limit) || 10);
+  const accountIds = await getUserAccountIds(req.user._id);
+
+  const pipeline = [
+    { $match: { instagramAccount: { $in: accountIds }, channel: "comment", mediaId: { $ne: null } } },
+    {
+      $group: {
+        _id: { mediaId: "$mediaId", account: "$instagramAccount" },
+        triggeredCount: { $sum: 1 },
+        dmsSentCount: { $sum: { $cond: ["$dmSent", 1, 0] } },
+        lastActivityAt: { $max: "$createdAt" },
+      },
+    },
+    { $sort: { triggeredCount: -1 } },
+    { $skip: (page - 1) * limit },
+    { $limit: limit },
+  ];
+
+  const [rows, totalResult] = await Promise.all([
+    InteractionLog.aggregate(pipeline),
+    InteractionLog.aggregate([
+      { $match: { instagramAccount: { $in: accountIds }, channel: "comment", mediaId: { $ne: null } } },
+      { $group: { _id: { mediaId: "$mediaId", account: "$instagramAccount" } } },
+      { $count: "total" },
+    ]),
+  ]);
+
+  // Fetch live post details, one token-decrypt per unique account on this page
+  const accountsById = new Map();
+  for (const row of rows) {
+    const accId = row._id.account.toString();
+    if (!accountsById.has(accId)) {
+      const acc = await InstagramAccount.findById(accId).select("+accessTokenEncrypted");
+      accountsById.set(accId, acc);
+    }
+  }
+
+  const posts = await Promise.all(
+    rows.map(async (row) => {
+      const acc = accountsById.get(row._id.account.toString());
+      let media = null;
+      if (acc) {
+        try {
+          media = await getMediaById(decrypt(acc.accessTokenEncrypted), row._id.mediaId);
+        } catch {
+          media = null;
+        }
+      }
+
+      const conversion = row.triggeredCount > 0 ? Math.round((row.dmsSentCount / row.triggeredCount) * 1000) / 10 : 0;
+
+      return {
+        mediaId: row._id.mediaId,
+        caption: media?.caption?.slice(0, 80) || "Post unavailable",
+        thumbnailUrl: media?.thumbnail_url || media?.media_url || null,
+        permalink: media?.permalink || null,
+        triggeredCount: row.triggeredCount,
+        dmsSentCount: row.dmsSentCount,
+        conversion,
+        lastActivityAt: row.lastActivityAt,
+      };
+    })
+  );
+
+  res.json({
+    posts,
     pagination: {
       page,
       limit,
