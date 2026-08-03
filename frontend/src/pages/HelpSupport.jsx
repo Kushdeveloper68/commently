@@ -4,7 +4,7 @@ import { Helmet } from "react-helmet-async";
 import {
   Search, Rocket, Bot, Link2, CreditCard, ChevronRight, Mail, ChevronDown,
 } from "lucide-react";
-import AppLayout from "../../../../commently-ui-migration/frontend/src/components/AppLayout.jsx";
+import AppLayout from "../components/AppLayout.jsx";
 
 const CATEGORIES = [
   {
