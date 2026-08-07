@@ -2,7 +2,7 @@ import InstagramAccount from "../models/InstagramAccount.js";
 import Automation from "../models/Automation.js";
 import InteractionLog from "../models/InteractionLog.js";
 import Subscription from "../models/Subscription.js";
-import { getPlanLimits } from "../config/planLimits.js";
+import { getEffectivePlanLimits } from "../services/planResolver.js";
 import { decrypt } from "../utils/crypto.js";
 import { getMediaById } from "../services/instagramService.js";
 
@@ -32,7 +32,7 @@ export async function getOverview(req, res) {
     ]),
   ]);
 
-  const limits = getPlanLimits(req.user.plan);
+  const limits = await getEffectivePlanLimits(req.user);
   const successRate = totalComments > 0 ? Math.round((dmsSent / totalComments) * 100) : 0;
 
   res.json({

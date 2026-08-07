@@ -1,4 +1,4 @@
-import { getPlanLimits } from "../config/planLimits.js";
+import { getEffectivePlanLimits } from "./planResolver.js";
 import { sendEmailAsync } from "./emailService.js";
 import { quota80Email, quota100Email } from "./emailTemplates.js";
 
@@ -7,7 +7,9 @@ import { quota80Email, quota100Email } from "./emailTemplates.js";
 // (the alert flags are cleared by the monthly usage-reset cron). This
 // never blocks the caller — sendEmailAsync is fire-and-forget.
 export async function maybeSendQuotaAlerts(user) {
-  const limits = getPlanLimits(user.plan);
+  if (user.emailPreferences?.quotaAlerts === false) return;
+
+  const limits = await getEffectivePlanLimits(user);
   const pct = user.dmsSentThisMonth / limits.maxDmsPerMonth;
 
   if (pct >= 1 && !user.quota100AlertSentAt) {

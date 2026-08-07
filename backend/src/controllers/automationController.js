@@ -1,6 +1,6 @@
 import Automation from "../models/Automation.js";
 import InstagramAccount from "../models/InstagramAccount.js";
-import { getPlanLimits } from "../config/planLimits.js";
+import { getEffectivePlanLimits } from "../services/planResolver.js";
 
 // GET /api/automations
 export async function listAutomations(req, res) {
@@ -16,7 +16,7 @@ export async function duplicateAutomation(req, res) {
   const original = await Automation.findOne({ _id: req.params.id, user: req.user._id });
   if (!original) return res.status(404).json({ error: "Automation not found" });
 
-  const limits = getPlanLimits(req.user.plan);
+  const limits = await getEffectivePlanLimits(req.user);
   const count = await Automation.countDocuments({ user: req.user._id });
   if (count >= limits.maxAutomations) {
     return res.status(403).json({
@@ -73,7 +73,7 @@ export async function createAutomation(req, res) {
   if (!account)
     return res.status(404).json({ error: "Instagram account not found" });
 
-  const limits = getPlanLimits(req.user.plan);
+  const limits = await getEffectivePlanLimits(req.user);
 
   if (publicReply?.enabled && channel && channel !== "comment") {
     return res.status(400).json({ error: "Public reply is only available for the comment channel" });

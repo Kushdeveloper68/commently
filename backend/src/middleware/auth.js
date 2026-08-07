@@ -19,6 +19,13 @@ export async function requireAuth(req, res, next) {
       return res.status(401).json({ error: "User not found or inactive" });
     }
 
+    if (user.isSuspended) {
+      return res.status(403).json({
+        error: "Your account has been suspended. Contact support if you believe this is a mistake.",
+        code: "ACCOUNT_SUSPENDED",
+      });
+    }
+
     req.user = user;
     next();
   } catch (err) {

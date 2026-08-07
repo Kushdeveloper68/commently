@@ -106,7 +106,7 @@ async function processComment(igBusinessId, value) {
   }
 
   const user = await User.findById(account.user);
-  if (!user) return;
+  if (!user || user.isSuspended) return;
 
   const automations = await Automation.find({
     instagramAccount: account._id,
@@ -124,7 +124,7 @@ async function processComment(igBusinessId, value) {
 
   if (!matched) return;
 
-  if (hasReachedDmQuota(user)) {
+  if (await hasReachedDmQuota(user)) {
     console.log(`⚠️ User ${user._id} hit monthly DM quota — skipping automation ${matched._id}`);
     return;
   }
@@ -220,7 +220,7 @@ async function processIncomingMessage(igBusinessId, messagingEvent, channel) {
   if (!account) return;
 
   const user = await User.findById(account.user);
-  if (!user) return;
+  if (!user || user.isSuspended) return;
 
   const automations = await Automation.find({
     instagramAccount: account._id,
@@ -242,7 +242,7 @@ async function processIncomingMessage(igBusinessId, messagingEvent, channel) {
 
   if (!matched) return;
 
-  if (hasReachedDmQuota(user)) {
+  if (await hasReachedDmQuota(user)) {
     console.log(`⚠️ User ${user._id} hit monthly DM quota — skipping automation ${matched._id}`);
     return;
   }
@@ -317,9 +317,9 @@ async function handleFollowConfirmPostback(igBusinessId, messagingEvent) {
 
   const automation = log.automation;
   const user = await User.findById(account.user);
-  if (!user) return;
+  if (!user || user.isSuspended) return;
 
-  if (hasReachedDmQuota(user)) {
+  if (await hasReachedDmQuota(user)) {
     console.log(`⚠️ User ${user._id} hit monthly DM quota — skipping gated release for ${log._id}`);
     return;
   }

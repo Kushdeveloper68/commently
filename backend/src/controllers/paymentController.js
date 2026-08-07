@@ -1,25 +1,31 @@
 import User from "../models/User.js";
 import Subscription from "../models/Subscription.js";
-import { getPlanLimits, PLAN_LIMITS } from "../config/planLimits.js";
+import { getPlanLimitsByKey, getAllVisiblePlans } from "../services/planResolver.js";
 import { createOrder, verifyPaymentSignature, verifyWebhookSignature } from "../services/razorpayService.js";
 import { sendEmailAsync } from "../services/emailService.js";
 import { subscriptionCancelledEmail, paymentReceiptEmail } from "../services/emailTemplates.js";
 
 // GET /api/billing/plans — public pricing data for the pricing page
-export function getPlans(req, res) {
-  res.json({ plans: PLAN_LIMITS });
+// (built-in plans + any admin-created custom plans marked publicly visible)
+export async function getPlans(req, res) {
+  const plans = await getAllVisiblePlans();
+  res.json({ plans });
 }
 
-// POST /api/billing/create-order  { plan: "starter" | "pro" }
+// POST /api/billing/create-order  { plan: "starter" | "pro" | <custom plan key> }
 export async function createPaymentOrder(req, res) {
   try {
     const { plan } = req.body;
 
-    if (!["starter", "pro"].includes(plan)) {
+    if (plan === "free") {
       return res.status(400).json({ error: "Invalid plan" });
     }
 
-    const limits = getPlanLimits(plan);
+    const limits = await getPlanLimitsByKey(plan);
+    if (!limits) {
+      return res.status(400).json({ error: "Invalid plan" });
+    }
+
     const order = await createOrder(limits.priceInPaise, `ord_${req.user._id}`.slice(0, 40));
 
     await Subscription.create({
