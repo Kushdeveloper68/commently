@@ -5,6 +5,7 @@ import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider } from "./context/AuthContext.jsx";
 import { ThemeProvider } from "./context/ThemeContext.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
+import AdminRoute from "./components/AdminRoute.jsx";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 
 // Landing/Login/legal stay eager — they're the first thing a new visitor
@@ -25,6 +26,8 @@ const Profile = lazy(() => import("./pages/Profile.jsx"));
 const Billing = lazy(() => import("./pages/Billing.jsx"));
 const Analytics = lazy(() => import("./pages/Analytics.jsx"));
 const HelpSupport = lazy(() => import("./pages/HelpSupport.jsx"));
+const Admin = lazy(() => import("./pages/Admin.jsx"));
+const AdminUserDetail = lazy(() => import("./pages/AdminUserDetail.jsx"));
 
 function PageFallback() {
   return (
@@ -67,6 +70,9 @@ export default function App() {
                   <Route path="/help" element={<ProtectedRoute><HelpSupport /></ProtectedRoute>} />
                   <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
                   <Route path="/billing" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
+
+                  <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
+                  <Route path="/admin/users/:id" element={<AdminRoute><AdminUserDetail /></AdminRoute>} />
 
                   <Route path="*" element={<NotFound />} />
                 </Routes>

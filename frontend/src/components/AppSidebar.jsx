@@ -1,5 +1,6 @@
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, Bot, Instagram, BarChart3, CreditCard, Settings, Plus, MessageSquare } from "lucide-react";
+import { LayoutDashboard, Bot, Instagram, BarChart3, CreditCard, Settings, Plus, MessageSquare, ShieldCheck } from "lucide-react";
+import { useAuth } from "../context/AuthContext.jsx";
 
 const links = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -11,6 +12,7 @@ const links = [
 ];
 
 export default function AppSidebar({ open, onClose }) {
+  const { user } = useAuth();
   return (
     <>
       {open && <div className="md:hidden fixed inset-0 bg-black/60 z-40" onClick={onClose} />}
@@ -48,6 +50,20 @@ export default function AppSidebar({ open, onClose }) {
               <span>{label}</span>
             </NavLink>
           ))}
+          {user?.role === "admin" && (
+            <NavLink
+              to="/admin"
+              onClick={onClose}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-200 mt-2 pt-3 border-t border-outline-variant ${
+                  isActive ? "text-primary font-bold" : "text-on-surface-variant hover:bg-surface-container-high"
+                }`
+              }
+            >
+              <ShieldCheck size={19} />
+              <span>Admin</span>
+            </NavLink>
+          )}
         </nav>
 
         <div className="mt-auto pt-6 border-t border-outline-variant">
