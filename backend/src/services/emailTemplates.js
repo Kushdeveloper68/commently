@@ -1,11 +1,11 @@
 function wrapper(bodyHtml) {
   return `
   <div style="font-family: -apple-system, Segoe UI, Roboto, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 24px; color: #101828;">
-    <div style="font-size: 20px; font-weight: 700; color: #2954ff; margin-bottom: 24px;">Commently</div>
+    <div style="font-size: 20px; font-weight: 700; color: #2954ff; margin-bottom: 24px;">DMLoop</div>
     ${bodyHtml}
     <p style="font-size: 13px; color: #8892a6; margin-top: 32px; border-top: 1px solid #e3e7f0; padding-top: 16px;">
-      Commently · <a href="https://commently.app/dashboard" style="color: #2954ff;">Open dashboard</a> ·
-      <a href="https://commently.app/billing" style="color: #2954ff;">Manage billing</a>
+      DMLoop · <a href="https://dmloop.app/dashboard" style="color: #2954ff;">Open dashboard</a> ·
+      <a href="https://dmloop.app/billing" style="color: #2954ff;">Manage billing</a>
     </p>
   </div>`;
 }
@@ -21,7 +21,7 @@ export function quota80Email(user, limits) {
       <strong style="text-transform: capitalize;">${user.plan}</strong> plan.</p>
       <p>Once you hit the limit, automations pause automatically (nothing breaks, nothing sends
       double) until next month — or you can upgrade to keep them running without interruption.</p>
-      <p><a href="https://commently.app/billing" style="display:inline-block; background:#2954ff; color:#fff; padding:10px 20px; border-radius:8px; text-decoration:none; font-weight:600; margin-top:8px;">Upgrade plan</a></p>
+      <p><a href="https://dmloop.app/billing" style="display:inline-block; background:#2954ff; color:#fff; padding:10px 20px; border-radius:8px; text-decoration:none; font-weight:600; margin-top:8px;">Upgrade plan</a></p>
     `),
   };
 }
@@ -36,7 +36,7 @@ export function quota100Email(user, limits) {
       limit on the <strong style="text-transform: capitalize;">${user.plan}</strong> plan.
       Your automations have paused — comments and DMs will stop triggering replies until your
       usage resets or you upgrade.</p>
-      <p><a href="https://commently.app/billing" style="display:inline-block; background:#2954ff; color:#fff; padding:10px 20px; border-radius:8px; text-decoration:none; font-weight:600; margin-top:8px;">Upgrade to keep automations running</a></p>
+      <p><a href="https://dmloop.app/billing" style="display:inline-block; background:#2954ff; color:#fff; padding:10px 20px; border-radius:8px; text-decoration:none; font-weight:600; margin-top:8px;">Upgrade to keep automations running</a></p>
     `),
   };
 }
@@ -45,7 +45,7 @@ export function subscriptionCancelledEmail(user, subscription) {
   const accessUntil = subscription.periodEnd.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
   return {
     to: user.email,
-    subject: "Your Commently subscription has been cancelled",
+    subject: "Your DMLoop subscription has been cancelled",
     html: wrapper(`
       <p>Hi ${user.name},</p>
       <p>Your <strong style="text-transform: capitalize;">${subscription.plan}</strong> plan won't renew.
@@ -60,7 +60,7 @@ export function paymentReceiptEmail(user, subscription) {
   const date = new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
   return {
     to: user.email,
-    subject: `Receipt: Commently ${subscription.plan} plan — ${amount}`,
+    subject: `Receipt: DMLoop ${subscription.plan} plan — ${amount}`,
     html: wrapper(`
       <p>Hi ${user.name},</p>
       <p>Thanks for your payment — here's your receipt.</p>
@@ -70,7 +70,7 @@ export function paymentReceiptEmail(user, subscription) {
         <tr><td style="padding:6px 0; color:#5b6472;">Date</td><td style="padding:6px 0; text-align:right;">${date}</td></tr>
         <tr><td style="padding:6px 0; color:#5b6472;">Payment ID</td><td style="padding:6px 0; text-align:right;">${subscription.razorpayPaymentId}</td></tr>
       </table>
-      <p style="font-size: 13px; color: #8892a6;">This is a payment receipt, not a GST tax invoice. Contact billing@commently.app if you need a GST invoice for your records.</p>
+      <p style="font-size: 13px; color: #8892a6;">This is a payment receipt, not a GST tax invoice. Contact billing@dmloop.app if you need a GST invoice for your records.</p>
     `),
   };
 }

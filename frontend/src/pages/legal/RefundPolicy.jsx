@@ -4,11 +4,11 @@ export default function RefundPolicy() {
   return (
     <LegalLayout
       title="Refund Policy"
-      description="Commently's refund and cancellation policy for Starter and Pro subscriptions."
+      description="DMLoop's refund and cancellation policy for Starter and Pro subscriptions."
       updatedAt="31 July 2026"
     >
       <p className="text-muted">
-        We want you to feel confident trying Commently. Here's exactly how billing, cancellations,
+        We want you to feel confident trying DMLoop. Here's exactly how billing, cancellations,
         and refunds work — no fine print surprises.
       </p>
 
@@ -25,7 +25,7 @@ export default function RefundPolicy() {
         <p>You're eligible for a full refund if:</p>
         <ul className="list-disc pl-5 space-y-1.5">
           <li>You were charged due to a billing error on our end (duplicate charge, wrong plan amount)</li>
-          <li>You request a refund within <strong className="text-ink">7 days</strong> of your first-ever payment to Commently, and haven't sent more than 50 automated replies on the plan you're cancelling</li>
+          <li>You request a refund within <strong className="text-ink">7 days</strong> of your first-ever payment to DMLoop, and haven't sent more than 50 automated replies on the plan you're cancelling</li>
         </ul>
         <p>
           Refunds are not available for renewal charges (i.e. your subscription auto-renewing for a
@@ -37,7 +37,7 @@ export default function RefundPolicy() {
       <Section heading="3. How refunds are processed">
         <p>
           Approved refunds are issued to your original payment method through Razorpay within 5–7
-          business days of approval. Email us at <span className="text-ink">billing@commently.app</span> with
+          business days of approval. Email us at <span className="text-ink">billing@dmloop.app</span> with
           your account email and order ID to request one — we typically respond within 24 hours.
         </p>
       </Section>

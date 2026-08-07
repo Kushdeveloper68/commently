@@ -66,7 +66,7 @@ export default function Billing() {
         amount: data.amount,
         currency: data.currency,
         order_id: data.orderId,
-        name: "Commently",
+        name: "DMLoop",
         description: `${PLAN_DISPLAY[plan].label} Plan Subscription`,
         theme: { color: "#3C7BFA" },
         handler: async (response) => {

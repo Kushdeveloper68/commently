@@ -30,7 +30,7 @@ export default function Sidebar() {
     <>
       <div className="px-6 py-6 border-b border-border flex items-center justify-between">
         <div>
-          <div className="font-display text-2xl font-bold text-gold-bright tracking-tight">Commently</div>
+          <div className="font-display text-2xl font-bold text-gold-bright tracking-tight">DMLoop</div>
           <div className="text-xs text-muted mt-1 capitalize">{user?.plan || "free"} plan</div>
         </div>
         <button onClick={() => setOpen(false)} className="md:hidden text-muted hover:text-ink">
@@ -88,7 +88,7 @@ export default function Sidebar() {
         <button onClick={() => setOpen(true)} className="text-muted hover:text-ink" aria-label="Open menu">
           <Menu size={22} />
         </button>
-        <div className="font-display text-lg font-bold text-gold-bright">Commently</div>
+        <div className="font-display text-lg font-bold text-gold-bright">DMLoop</div>
         <ThemeToggle />
       </header>
 

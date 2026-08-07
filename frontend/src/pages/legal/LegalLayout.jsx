@@ -6,7 +6,7 @@ export default function LegalLayout({ title, description, updatedAt, children })
   return (
     <div className="min-h-screen bg-background text-on-surface">
       <Helmet>
-        <title>{title} — Commently</title>
+        <title>{title} — DMLoop</title>
         <meta name="description" content={description} />
         <meta name="robots" content="index, follow" />
       </Helmet>
@@ -14,13 +14,13 @@ export default function LegalLayout({ title, description, updatedAt, children })
       <header className="border-b border-outline-variant">
         <div className="max-w-3xl mx-auto px-6 py-5 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2 text-sm text-on-surface-variant hover:text-primary transition-colors">
-            <ArrowLeft size={16} /> Back to Commently
+            <ArrowLeft size={16} /> Back to DMLoop
           </Link>
           <Link to="/" className="flex items-center gap-2">
             <span className="w-6 h-6 rounded bg-primary flex items-center justify-center">
               <MessageSquare size={13} className="text-on-primary" />
             </span>
-            <span className="font-bold text-sm">Commently</span>
+            <span className="font-bold text-sm">DMLoop</span>
           </Link>
         </div>
       </header>

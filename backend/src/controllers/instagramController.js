@@ -134,7 +134,7 @@ export async function syncAccount(req, res) {
 }
 
 // POST /api/instagram/deauthorize — Meta calls this when a user removes
-// Commently's access directly from Instagram (not through our UI). Without
+// DMLoop's access directly from Instagram (not through our UI). Without
 // this, we'd only find out once the stored token starts failing — possibly
 // days later, via the refresh cron. Register this URL as the "Deauthorize
 // Callback URL" in Meta App Dashboard → Instagram API → API setup.

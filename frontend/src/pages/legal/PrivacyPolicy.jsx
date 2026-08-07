@@ -4,12 +4,12 @@ export default function PrivacyPolicy() {
   return (
     <LegalLayout
       title="Privacy Policy"
-      description="How Commently collects, stores, and protects your data and your Instagram account information."
+      description="How DMLoop collects, stores, and protects your data and your Instagram account information."
       updatedAt="31 July 2026"
     >
       <p className="text-muted">
-        This Privacy Policy explains what data Commently collects when you use our platform, why we
-        collect it, and how it's protected. We built Commently to handle real Instagram accounts and
+        This Privacy Policy explains what data DMLoop collects when you use our platform, why we
+        collect it, and how it's protected. We built DMLoop to handle real Instagram accounts and
         real customer conversations, so we've tried to keep this as specific and honest as possible.
       </p>
 
@@ -33,7 +33,7 @@ export default function PrivacyPolicy() {
 
       <Section heading="3. Who we share it with">
         <p>
-          We share data only with the services that make Commently work: Meta (to operate the
+          We share data only with the services that make DMLoop work: Meta (to operate the
           Instagram API connection you've authorized), Razorpay (to process payments), and our cloud
           hosting and database providers (to run the service). None of these are permitted to use
           your data for anything beyond that.
@@ -44,7 +44,7 @@ export default function PrivacyPolicy() {
         <p>
           Interaction logs are kept for as long as your account is active, so your Analytics stay
           accurate. If you disconnect an Instagram account, we stop collecting new data for it
-          immediately. If you delete your Commently account, we delete your stored access tokens and
+          immediately. If you delete your DMLoop account, we delete your stored access tokens and
           personal account information within 30 days.
         </p>
       </Section>
@@ -68,7 +68,7 @@ export default function PrivacyPolicy() {
       <Section heading="7. Contact">
         <p>
           Questions about this policy, or want your data deleted? Email us at{" "}
-          <span className="text-ink">privacy@commently.app</span>.
+          <span className="text-ink">privacy@dmloop.app</span>.
         </p>
       </Section>
     </LegalLayout>

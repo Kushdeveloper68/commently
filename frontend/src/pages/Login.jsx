@@ -38,7 +38,7 @@ export default function Login() {
   const handleCredentialResponse = async (response) => {
     try {
       await loginWithGoogle(response.credential);
-      toast.success("Welcome to Commently!");
+      toast.success("Welcome to DMLoop!");
       navigate("/dashboard");
     } catch (err) {
       toast.error("Login failed. Please try again.");
@@ -48,7 +48,7 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-background text-on-surface relative overflow-hidden">
       <Helmet>
-        <title>Sign In — Commently</title>
+        <title>Sign In — DMLoop</title>
       </Helmet>
 
       {/* Ambient background glows */}
@@ -69,7 +69,7 @@ export default function Login() {
               <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
                 <MessageSquare size={19} className="text-on-primary" />
               </div>
-              <span className="text-h1 tracking-tighter font-bold text-white">Commently</span>
+              <span className="text-h1 tracking-tighter font-bold text-white">DMLoop</span>
             </div>
             <h3 className="text-display-lg mb-stack-md leading-[1.05] tracking-tight text-on-surface font-bold">
               The operating system for <span className="text-primary/90">social growth.</span>
@@ -95,7 +95,7 @@ export default function Login() {
         <div className="flex items-center justify-center p-gutter relative">
           <div className="w-full max-w-[440px]">
             <div className="lg:hidden mb-stack-lg flex flex-col items-center text-center">
-              <h1 className="text-h1 tracking-tighter mb-1 font-bold text-white">Commently</h1>
+              <h1 className="text-h1 tracking-tighter mb-1 font-bold text-white">DMLoop</h1>
               <p className="text-on-surface-variant text-label-sm opacity-60">Instagram automation, done right</p>
             </div>
 
@@ -146,7 +146,7 @@ export default function Login() {
                 <Link className="hover:text-primary transition-colors hover:underline underline-offset-4" to="/refund-policy">Refund Policy</Link>
               </div>
               <p className="mt-stack-sm text-[11px] text-on-surface-variant/30 uppercase tracking-widest font-bold">
-                © 2026 Commently
+                © 2026 DMLoop
               </p>
             </footer>
           </div>

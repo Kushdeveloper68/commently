@@ -3,7 +3,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 const ThemeContext = createContext(null);
 
 function getInitialTheme() {
-  const stored = localStorage.getItem("commently-theme");
+  const stored = localStorage.getItem("dmloop-theme");
   if (stored === "light" || stored === "dark") return stored;
   // Fall back to the visitor's OS preference on first visit
   return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
@@ -14,7 +14,7 @@ export function ThemeProvider({ children }) {
 
   useEffect(() => {
     document.documentElement.classList.toggle("light", theme === "light");
-    localStorage.setItem("commently-theme", theme);
+    localStorage.setItem("dmloop-theme", theme);
   }, [theme]);
 
   const toggleTheme = () => setTheme((t) => (t === "dark" ? "light" : "dark"));

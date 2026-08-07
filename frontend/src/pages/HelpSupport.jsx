@@ -10,7 +10,7 @@ const CATEGORIES = [
   {
     icon: Rocket,
     title: "Getting Started",
-    desc: "New to Commently? Start here to connect your first account and go live.",
+    desc: "New to DMLoop? Start here to connect your first account and go live.",
     links: [
       { label: "Connect your Instagram account", to: "/connect-instagram" },
       { label: "Create your first automation", to: "/automations/new" },
@@ -46,7 +46,7 @@ const CATEGORIES = [
 ];
 
 const FAQS = [
-  { q: "Is this against Instagram's rules?", a: "No. Commently connects through Meta's official Instagram API. You authorize access, and you can revoke it anytime from Instagram Accounts or your Instagram app settings." },
+  { q: "Is this against Instagram's rules?", a: "No. DMLoop connects through Meta's official Instagram API. You authorize access, and you can revoke it anytime from Instagram Accounts or your Instagram app settings." },
   { q: "Do I need a Business or Creator account?", a: "Yes — Instagram's automation API only works with Business or Creator accounts. Switching is free in the Instagram app under Settings → Account type." },
   { q: "What happens if I hit my monthly DM limit?", a: "Automations pause until your next billing cycle resets, or you can upgrade instantly from Billing to keep them running. No messages are lost — they simply stop firing until the limit resets." },
   { q: "Why did my automation stop working?", a: "The most common cause is a Reconnect required status on Instagram Accounts — Instagram tokens occasionally need re-authorization. Check that page first; if the account shows 'Action Required', click Reconnect." },
@@ -65,7 +65,7 @@ export default function HelpSupport() {
 
   return (
     <AppLayout>
-      <Helmet><title>Help &amp; Support — Commently</title></Helmet>
+      <Helmet><title>Help &amp; Support — DMLoop</title></Helmet>
 
       <section className="bg-surface-container/40 rounded-2xl p-8 sm:p-12 border border-outline-variant mb-12">
         <h1 className="text-display-lg text-[40px] sm:text-display-lg mb-4 bg-gradient-to-r from-primary to-white bg-clip-text text-transparent tracking-tighter font-bold">
@@ -128,7 +128,7 @@ export default function HelpSupport() {
           <h2 className="text-h1 mb-2">Still have questions?</h2>
           <p className="text-on-surface-variant text-body-md">Email us and we'll get back to you — usually within a day.</p>
         </div>
-        <a href="mailto:support@commently.app" className="btn-primary flex items-center gap-2 px-6 py-3.5 whitespace-nowrap">
+        <a href="mailto:support@dmloop.app" className="btn-primary flex items-center gap-2 px-6 py-3.5 whitespace-nowrap">
           <Mail size={18} /> Email Our Team
         </a>
       </section>

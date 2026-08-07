@@ -39,7 +39,7 @@ export function sendEmailAsync({ to, subject, html }) {
       if (!t) return;
 
       await t.sendMail({
-        from: process.env.EMAIL_FROM || '"Commently" <no-reply@commently.app>',
+        from: process.env.EMAIL_FROM || '"DMLoop" <no-reply@dmloop.app>',
         to,
         subject,
         html,

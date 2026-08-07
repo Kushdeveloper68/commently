@@ -12,8 +12,10 @@ export function getInstagramAuthUrl(state) {
       "instagram_business_basic",
       "instagram_business_manage_messages",
       "instagram_business_manage_comments",
-      "instagram_business_content_publish",
-      "instagram_business_manage_insights",
+      // content_publish and manage_insights were requested earlier but
+      // DMLoop doesn't actually use them anywhere — Meta explicitly
+      // flags unused/"scope creep" permissions during App Review, so only
+      // request what the screencast can actually demonstrate.
     ].join(","),
     response_type: "code",
     state,

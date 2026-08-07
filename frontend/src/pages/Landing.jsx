@@ -10,7 +10,7 @@ export default function Landing() {
   return (
     <div className="bg-background text-on-surface min-h-screen selection:bg-primary selection:text-white overflow-x-hidden">
       <Helmet>
-        <title>Commently | Industrial-Grade Instagram Automation</title>
+        <title>DMLoop | Industrial-Grade Instagram Automation</title>
         <meta name="description" content="Trigger auto-replies and DMs based on Instagram comments, Story replies, and DMs. Move from manual engagement to 24/7 conversion." />
       </Helmet>
 
@@ -35,7 +35,7 @@ function Header() {
     <header className="flex justify-between items-center px-gutter w-full sticky top-0 z-50 bg-background/80 backdrop-blur-md h-16 border-b border-outline-variant">
       <div className="max-w-[1200px] w-full mx-auto flex items-center justify-between">
         <div className="flex items-center gap-8">
-          <span className="text-h2 font-black tracking-tighter">Commently</span>
+          <span className="text-h2 font-black tracking-tighter">DMLoop</span>
           <nav className="hidden md:flex items-center gap-6">
             <a className="text-label-sm text-on-surface-variant hover:text-primary transition-colors" href="#features">Features</a>
             <a className="text-label-sm text-on-surface-variant hover:text-primary transition-colors" href="#pricing">Pricing</a>
@@ -74,7 +74,7 @@ function Hero() {
             Built on Meta's official Instagram API
           </span>
           <h1 className="text-[40px] sm:text-[56px] md:text-display-xl tracking-tighter leading-[1.05] font-bold">
-            Automate Instagram engagement with Commently.
+            Automate Instagram engagement with DMLoop.
           </h1>
           <p className="text-body-lg text-on-surface-variant max-w-lg">
             Trigger auto-replies and DMs from comments, Story replies, and DMs. Move from manual engagement to 24/7 conversion.
@@ -176,7 +176,7 @@ function HowItWorks() {
   const steps = [
     { n: 1, title: "Connect IG", body: "Securely link your professional account through Meta's official API." },
     { n: 2, title: "Set Keywords", body: "Define trigger phrases for automated, personalized responses." },
-    { n: 3, title: "Automate", body: "Sit back while Commently handles every comment, reply, and DM in real time." },
+    { n: 3, title: "Automate", body: "Sit back while DMLoop handles every comment, reply, and DM in real time." },
   ];
   return (
     <section id="how" className="pb-section-gap scroll-mt-20">
@@ -260,11 +260,11 @@ function WhyDifferent() {
     { title: "Priced for India", body: "Plans start at ₹399/month — built for creators and small agencies, not enterprise budgets." },
     { title: "You own the data", body: "Every comment, reply, and lead lives in your dashboard. Export or delete it whenever you want." },
     { title: "No black-box AI", body: "Automations run on rules you write and can read back — you always know why a message was sent." },
-    { title: "Built by operators", body: "We run our own agency on Instagram. Commently is the tool we needed and couldn't find." },
+    { title: "Built by operators", body: "We run our own agency on Instagram. DMLoop is the tool we needed and couldn't find." },
   ];
   return (
     <section className="pb-section-gap">
-      <h2 className="text-h1 text-white mb-12">Why Commently</h2>
+      <h2 className="text-h1 text-white mb-12">Why DMLoop</h2>
       <div className="grid md:grid-cols-2 gap-x-10 gap-y-8">
         {points.map((p) => (
           <div key={p.title} className="bg-surface-container rounded-xl p-padding-card border border-outline-variant flex gap-4">
@@ -304,7 +304,7 @@ function Footer() {
     <footer className="bg-surface-container border-t border-outline-variant py-16 sm:py-20">
       <div className="max-w-[1200px] mx-auto px-gutter grid sm:grid-cols-2 md:grid-cols-4 gap-10 sm:gap-12">
         <div className="space-y-6">
-          <span className="text-h2 font-black tracking-tighter text-white">Commently</span>
+          <span className="text-h2 font-black tracking-tighter text-white">DMLoop</span>
           <p className="text-label-sm text-on-surface-variant leading-relaxed">
             Instagram automation for high-growth creators and agencies.
           </p>
@@ -334,11 +334,11 @@ function Footer() {
         </div>
         <div>
           <h5 className="text-white font-bold mb-6">Contact</h5>
-          <p className="text-label-sm text-on-surface-variant">support@commently.app</p>
+          <p className="text-label-sm text-on-surface-variant">support@dmloop.app</p>
         </div>
       </div>
       <div className="max-w-[1200px] mx-auto px-gutter mt-16 pt-8 border-t border-outline-variant flex flex-col md:flex-row justify-between items-center gap-4">
-        <p className="text-label-sm text-on-surface-variant">© 2026 Commently. Not affiliated with or endorsed by Meta or Instagram.</p>
+        <p className="text-label-sm text-on-surface-variant">© 2026 DMLoop. Not affiliated with or endorsed by Meta or Instagram.</p>
         <p className="text-label-sm text-on-surface-variant flex items-center gap-2">
           Built for Instagram <Heart size={14} className="text-primary fill-primary" />
         </p>

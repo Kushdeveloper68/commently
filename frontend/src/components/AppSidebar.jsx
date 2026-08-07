@@ -25,7 +25,7 @@ export default function AppSidebar({ open, onClose }) {
             <MessageSquare size={17} className="text-on-primary" />
           </div>
           <div>
-            <h2 className="text-h2 font-bold text-primary leading-tight">Commently</h2>
+            <h2 className="text-h2 font-bold text-primary leading-tight">DMLoop</h2>
             <p className="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Command Center</p>
           </div>
         </div>

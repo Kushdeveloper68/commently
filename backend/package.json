@@ -1,7 +1,7 @@
 {
-  "name": "commently-backend",
+  "name": "dmloop-backend",
   "version": "1.0.0",
-  "description": "Commently — Instagram comment-to-DM automation SaaS backend",
+  "description": "DMLoop — Instagram comment-to-DM automation SaaS backend",
   "main": "src/server.js",
   "type": "module",
   "scripts": {
@@ -25,7 +25,6 @@
     "morgan": "^1.10.0",
     "node-cron": "^3.0.3",
     "nodemailer": "^9.0.3",
-    "nodemon": "^3.1.14",
     "razorpay": "^2.9.4",
     "zod": "^3.23.8"
   }

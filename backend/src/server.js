@@ -86,7 +86,7 @@ const PORT = process.env.PORT || 5000;
 
 connectDB().then(() => {
   app.listen(PORT, () => {
-    console.log(`🚀 Commently backend running on port ${PORT}`);
+    console.log(`🚀 DMLoop backend running on port ${PORT}`);
   });
   startTokenRefreshCron();
   startSubscriptionExpiryCron();
