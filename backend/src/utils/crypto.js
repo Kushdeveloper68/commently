@@ -1,12 +1,34 @@
 import crypto from "crypto";
 
 // AES-256-GCM encryption for sensitive tokens at rest (e.g. Instagram access tokens).
-// JWT_SECRET is reused here as the encryption key source — in production, use a
-// dedicated 32-byte ENCRYPTION_KEY env var instead for cleaner separation.
 const ALGORITHM = "aes-256-gcm";
 
+let warnedAboutFallback = false;
+
 function getKey() {
-  const secret = process.env.JWT_SECRET || "fallback_dev_secret_change_me";
+  // Prefer a dedicated encryption key so rotating JWT_SECRET (e.g. to force
+  // logout everyone) doesn't also silently turn every stored Instagram token
+  // undecryptable. Falling back to JWT_SECRET keeps existing deployments
+  // that only ever set that var working without a data migration.
+  const secret = process.env.ENCRYPTION_KEY || process.env.JWT_SECRET;
+
+  if (!secret) {
+    // No hardcoded fallback anymore — a missing secret used to silently
+    // encrypt every Instagram access token with a fixed, publicly-known
+    // string ("fallback_dev_secret_change_me"), which is effectively no
+    // encryption at all if that ever shipped to production by accident.
+    throw new Error(
+      "ENCRYPTION_KEY (or JWT_SECRET as a fallback) must be set in the environment — refusing to encrypt/decrypt sensitive tokens without a real secret.",
+    );
+  }
+
+  if (!process.env.ENCRYPTION_KEY && !warnedAboutFallback) {
+    warnedAboutFallback = true;
+    console.warn(
+      "⚠️ ENCRYPTION_KEY is not set — deriving the token-encryption key from JWT_SECRET instead. Set a dedicated ENCRYPTION_KEY in production so the two concerns don't share a key.",
+    );
+  }
+
   return crypto.createHash("sha256").update(secret).digest();
 }
 

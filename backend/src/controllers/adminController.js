@@ -100,7 +100,7 @@ export async function listUsers(req, res) {
   const { search, plan } = req.query;
 
   const filter = {};
-  if (plan) filter.plan = plan;
+  if (plan && typeof plan === "string") filter.plan = plan;
   if (search) {
     filter.$or = [
       { name: { $regex: search, $options: "i" } },
@@ -165,6 +165,9 @@ export async function getUserDetail(req, res) {
 // PATCH /api/admin/users/:id/plan — { plan: "starter" | "pro" | <custom key> }
 export async function changeUserPlan(req, res) {
   const { plan } = req.body;
+  if (typeof plan !== "string" || !plan) {
+    return res.status(400).json({ error: "plan must be a string" });
+  }
   const isValidPlan = PLAN_LIMITS[plan] || (await Plan.exists({ key: plan }));
   if (!isValidPlan) return res.status(400).json({ error: "Unknown plan key" });
 

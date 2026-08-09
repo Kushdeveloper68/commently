@@ -51,7 +51,14 @@ export default function ConnectInstagram() {
 
   useEffect(() => {
     fetchAll();
-    if (searchParams.get("error")) toast.error("Couldn't connect Instagram. Please try again.");
+    const error = searchParams.get("error");
+    if (error === "account_already_linked") {
+      toast.error("That Instagram account is already connected to another DMLoop account. Disconnect it there first, or contact support.");
+    } else if (error === "account_limit_reached") {
+      toast.error("You've reached your plan's Instagram account limit. Upgrade to connect more.");
+    } else if (error) {
+      toast.error("Couldn't connect Instagram. Please try again.");
+    }
   }, [searchParams]);
 
   const handleConnect = async () => {

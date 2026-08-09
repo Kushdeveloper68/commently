@@ -42,6 +42,7 @@ export async function getEffectivePlanLimits(user) {
 // Resolves a plan by its key directly (not tied to a user) — used when
 // purchasing/assigning a plan, where all we have is the key someone picked.
 export async function getPlanLimitsByKey(key) {
+  if (typeof key !== "string" || !key) return null; // guards against NoSQL-injection-shaped objects reaching the query below
   if (PLAN_LIMITS[key]) return PLAN_LIMITS[key];
   const dbPlan = await Plan.findOne({ key, isActive: true }).lean();
   return dbPlan || null;

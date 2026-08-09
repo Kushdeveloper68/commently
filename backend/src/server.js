@@ -10,6 +10,7 @@ import * as Sentry from "@sentry/node";
 
 import { connectDB } from "./config/db.js";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
+import { sanitizeInput } from "./middleware/sanitizeInput.js";
 import { startTokenRefreshCron } from "./jobs/tokenRefresh.js";
 import { startSubscriptionExpiryCron } from "./jobs/subscriptionExpiry.js";
 import { startUsageResetCron } from "./jobs/usageReset.js";
@@ -64,6 +65,11 @@ app.use(express.json());
 app.use(cookieParser());
 // Meta's deauthorize/data-deletion callbacks POST as form-encoded, not JSON
 app.use(express.urlencoded({ extended: true }));
+
+// Strips Mongo operator keys ($ne, $gt, etc.) from body/query/params on every
+// request from here on — must come after the body parsers above (needs
+// req.body/req.query populated) and before any route touches them.
+app.use(sanitizeInput);
 
 // Basic rate limiting on auth endpoints to slow down brute-force attempts
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 30 });

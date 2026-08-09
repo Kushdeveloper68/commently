@@ -2,8 +2,10 @@ import crypto from "crypto";
 import InstagramAccount from "../models/InstagramAccount.js";
 import Automation from "../models/Automation.js";
 import InteractionLog from "../models/InteractionLog.js";
+import User from "../models/User.js";
 import { encrypt, decrypt } from "../utils/crypto.js";
 import { parseSignedRequest } from "../services/metaSignedRequest.js";
+import { getEffectivePlanLimits } from "../services/planResolver.js";
 import {
   getInstagramAuthUrl,
   exchangeCodeForToken,
@@ -55,9 +57,60 @@ export async function handleCallback(req, res) {
     const profile = await getInstagramProfile(longLived.access_token);
     console.log("✅ PROFILE", profile);
 
+    // igBusinessId is globally unique (see models/InstagramAccount.js) — an
+    // upsert keyed only on it would silently reassign someone else's already
+    // -connected account to whoever re-authorizes it next (e.g. two agency
+    // teammates who are both admins on the same client Instagram Business
+    // account). Check ownership BEFORE writing anything.
+    const existing = await InstagramAccount.findOne({ igBusinessId: profile.user_id });
+
+    if (existing && existing.user.toString() !== pending.userId && existing.isActive) {
+      console.warn(
+        `⚠️ Blocked cross-user Instagram reconnect: igBusinessId ${profile.user_id} is already linked to a different, active account.`,
+      );
+      return res.redirect(`${frontendUrl}/connect-instagram?error=account_already_linked`);
+    }
+
+    // enforceInstagramAccountLimit only runs on /instagram/connect (the
+    // initiate step) — a user can open several connect flows in parallel (or
+    // just wait a while between initiating and finishing one), so the plan's
+    // account-limit has to be re-checked here too, right before the slot is
+    // actually consumed. Reconnecting/refreshing an account the user already
+    // owns and has active doesn't consume a new slot, so it's exempt.
+    const isNewSlotForUser = !existing || existing.user.toString() !== pending.userId || !existing.isActive;
+    if (isNewSlotForUser) {
+      const pendingUser = await User.findById(pending.userId);
+      if (!pendingUser) {
+        return res.redirect(`${frontendUrl}/connect-instagram?error=connection_failed`);
+      }
+      const limits = await getEffectivePlanLimits(pendingUser);
+      const activeCount = await InstagramAccount.countDocuments({ user: pending.userId, isActive: true });
+      if (activeCount >= limits.maxInstagramAccounts) {
+        console.warn(`⚠️ Blocked Instagram connect for user ${pending.userId} — plan limit (${limits.maxInstagramAccounts}) already reached.`);
+        return res.redirect(`${frontendUrl}/connect-instagram?error=account_limit_reached`);
+      }
+    }
+
     await subscribeAccountToWebhooks(longLived.access_token);
 
     const expiresAt = new Date(Date.now() + longLived.expires_in * 1000);
+
+    // If this account previously belonged to someone else but was
+    // disconnected (isActive: false), the new owner can legitimately claim
+    // it — but that owner's old Automations still point at this
+    // InstagramAccount and must not silently keep running attributed to a
+    // different user. Pause them explicitly and leave an audit trail.
+    if (existing && existing.user.toString() !== pending.userId) {
+      const pausedCount = await Automation.updateMany(
+        { instagramAccount: existing._id, user: existing.user, status: { $ne: "paused" } },
+        { status: "paused" },
+      );
+      if (pausedCount.modifiedCount > 0) {
+        console.log(
+          `⏸️  Paused ${pausedCount.modifiedCount} automation(s) belonging to previous owner ${existing.user} after account ${profile.user_id} was reclaimed by a new user.`,
+        );
+      }
+    }
 
     await InstagramAccount.findOneAndUpdate(
       { igBusinessId: profile.user_id },

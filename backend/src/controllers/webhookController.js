@@ -13,6 +13,20 @@ import {
 import { hasReachedDmQuota } from "../middleware/planLimit.js";
 import { maybeSendQuotaAlerts } from "../services/usageAlerts.js";
 import { isFeatureEnabled } from "../services/featureFlags.js";
+import { getEffectivePlanLimits } from "../services/planResolver.js";
+
+// Runtime entitlement check — the LAST line of defense for the followGate /
+// publicReply paid features. An automation document can end up with these
+// flags set to true through more than one code path (create-time checks
+// can be bypassed via PUT /automations/:id, cloned via /duplicate, or left
+// over from before a plan downgrade) — rather than replicate the guard in
+// every one of those places, we check the user's CURRENT plan entitlement
+// right here, at the one place that actually sends the message and would
+// otherwise give the paid behavior away for free.
+async function hasFeatureEntitlement(user, feature) {
+  const limits = await getEffectivePlanLimits(user);
+  return !!limits.features?.[feature];
+}
 
 // GET /api/webhook/instagram — Meta's one-time verification handshake
 export function verifyWebhook(req, res) {
@@ -136,8 +150,13 @@ async function processComment(igBusinessId, value) {
   let recipientPsid = null;
   let gateStatus = "none";
 
+  // Re-check plan entitlement at send-time, not just the automation's stored
+  // flags — see hasFeatureEntitlement() above for why.
+  const followGateActive = !!matched.followGate?.enabled && (await hasFeatureEntitlement(user, "followGate"));
+  const publicReplyActive = !!matched.publicReply?.enabled && (await hasFeatureEntitlement(user, "publicReply"));
+
   try {
-    if (matched.followGate?.enabled && (await isFeatureEnabled("follow_gate", user))) {
+    if (followGateActive && (await isFeatureEnabled("follow_gate", user))) {
       // Send the "please follow" prompt first — the real dmReply.message is
       // released later, when handleFollowConfirmPostback sees the tap.
       const payload = `FOLLOW_CONFIRM:${commentId}`;
@@ -161,7 +180,7 @@ async function processComment(igBusinessId, value) {
     console.error("❌ Private reply failed:", dmError);
   }
 
-  if (dmSent && !matched.followGate?.enabled && matched.publicReply?.enabled && matched.publicReply.message) {
+  if (dmSent && !followGateActive && publicReplyActive && matched.publicReply.message) {
     try {
       await sendPublicReply(token, commentId, matched.publicReply.message);
     } catch (err) {
@@ -253,8 +272,10 @@ async function processIncomingMessage(igBusinessId, messagingEvent, channel) {
   let dmError = null;
   let gateStatus = "none";
 
+  const followGateActive = !!matched.followGate?.enabled && (await hasFeatureEntitlement(user, "followGate"));
+
   try {
-    if (matched.followGate?.enabled && (await isFeatureEnabled("follow_gate", user))) {
+    if (followGateActive && (await isFeatureEnabled("follow_gate", user))) {
       const payload = `FOLLOW_CONFIRM_DM:${mid}`;
       await sendDirectMessageWithButton(
         token,
@@ -348,7 +369,8 @@ async function handleFollowConfirmPostback(igBusinessId, messagingEvent) {
 
     // Public reply only applies to the comment flow — story replies/DMs have
     // no public comment thread to post into.
-    if (isCommentFlow && automation.publicReply?.enabled && automation.publicReply.message) {
+    const publicReplyActive = isCommentFlow && !!automation.publicReply?.enabled && (await hasFeatureEntitlement(user, "publicReply"));
+    if (publicReplyActive && automation.publicReply.message) {
       try {
         await sendPublicReply(token, sourceId, automation.publicReply.message);
       } catch (err) {

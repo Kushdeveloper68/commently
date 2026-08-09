@@ -2,6 +2,24 @@ import Automation from "../models/Automation.js";
 import InstagramAccount from "../models/InstagramAccount.js";
 import { getEffectivePlanLimits } from "../services/planResolver.js";
 
+// Shared by createAutomation and updateAutomation — validates that whatever
+// publicReply/followGate state a request is trying to set is actually
+// covered by the user's current plan. Takes the values that WOULD be in
+// effect after the update (i.e. already merged with the existing doc for
+// updates), so an update that doesn't touch these fields never trips it.
+function assertFeatureEntitlement(limits, { channel, publicReply, followGate }) {
+  if (publicReply?.enabled && channel && channel !== "comment") {
+    return { status: 400, error: "Public reply is only available for the comment channel" };
+  }
+  if (publicReply?.enabled && !limits.features.publicReply) {
+    return { status: 403, error: "Public reply requires a paid plan", code: "PLAN_FEATURE_LOCKED" };
+  }
+  if (followGate?.enabled && !limits.features.followGate) {
+    return { status: 403, error: "Follow-gating requires a paid plan", code: "PLAN_FEATURE_LOCKED" };
+  }
+  return null;
+}
+
 // GET /api/automations
 export async function listAutomations(req, res) {
   const automations = await Automation.find({ user: req.user._id })
@@ -25,6 +43,16 @@ export async function duplicateAutomation(req, res) {
     });
   }
 
+  // If the original was created on a higher plan (or the account has since
+  // been downgraded), don't silently carry locked features onto the clone —
+  // degrade them off instead of blocking the whole duplicate action.
+  const publicReply = !limits.features.publicReply && original.publicReply?.enabled
+    ? { ...original.publicReply.toObject?.() ?? original.publicReply, enabled: false }
+    : original.publicReply;
+  const followGate = !limits.features.followGate && original.followGate?.enabled
+    ? { ...original.followGate.toObject?.() ?? original.followGate, enabled: false }
+    : original.followGate;
+
   const clone = await Automation.create({
     user: original.user,
     instagramAccount: original.instagramAccount,
@@ -32,8 +60,8 @@ export async function duplicateAutomation(req, res) {
     channel: original.channel,
     trigger: original.trigger,
     keywordMatch: original.keywordMatch,
-    publicReply: original.publicReply,
-    followGate: original.followGate,
+    publicReply,
+    followGate,
     dmReply: original.dmReply,
     status: "draft",
   });
@@ -75,24 +103,10 @@ export async function createAutomation(req, res) {
 
   const limits = await getEffectivePlanLimits(req.user);
 
-  if (publicReply?.enabled && channel && channel !== "comment") {
-    return res.status(400).json({ error: "Public reply is only available for the comment channel" });
-  }
-  if (publicReply?.enabled && !limits.features.publicReply) {
-    return res
-      .status(403)
-      .json({
-        error: "Public reply requires a paid plan",
-        code: "PLAN_FEATURE_LOCKED",
-      });
-  }
-  if (followGate?.enabled && !limits.features.followGate) {
-    return res
-      .status(403)
-      .json({
-        error: "Follow-gating requires a paid plan",
-        code: "PLAN_FEATURE_LOCKED",
-      });
+  const violation = assertFeatureEntitlement(limits, { channel, publicReply, followGate });
+  if (violation) {
+    const { status, ...body } = violation;
+    return res.status(status).json(body);
   }
 
   const automation = await Automation.create({
@@ -126,6 +140,26 @@ export async function updateAutomation(req, res) {
   const updates = {};
   for (const field of allowedFields) {
     if (req.body[field] !== undefined) updates[field] = req.body[field];
+  }
+
+  const existing = await Automation.findOne({ _id: req.params.id, user: req.user._id });
+  if (!existing) return res.status(404).json({ error: "Automation not found" });
+
+  // Re-run the same plan-feature gate as createAutomation, against what the
+  // document would look like AFTER this update — without this, a free-plan
+  // user could create a plain automation (allowed) then immediately PUT
+  // { followGate: { enabled: true } } and get the paid feature for free
+  // forever, since nothing else re-checks it after creation.
+  const limits = await getEffectivePlanLimits(req.user);
+  const effective = {
+    channel: updates.channel !== undefined ? updates.channel : existing.channel,
+    publicReply: updates.publicReply !== undefined ? updates.publicReply : existing.publicReply,
+    followGate: updates.followGate !== undefined ? updates.followGate : existing.followGate,
+  };
+  const violation = assertFeatureEntitlement(limits, effective);
+  if (violation) {
+    const { status, ...body } = violation;
+    return res.status(status).json(body);
   }
 
   const automation = await Automation.findOneAndUpdate(

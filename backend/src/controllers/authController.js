@@ -39,6 +39,15 @@ export async function googleLogin(req, res) {
     });
     const payload = ticket.getPayload();
 
+    if (!payload.email_verified) {
+      // Google issues ID tokens for unverified emails in some edge cases
+      // (e.g. certain Workspace setups). Without this check, someone could
+      // "link" their Google login to an existing Commently account just by
+      // matching its email address, without actually proving ownership of
+      // that inbox.
+      return res.status(401).json({ error: "Your Google account's email isn't verified. Please verify it with Google and try again." });
+    }
+
     let user = await User.findOne({ googleId: payload.sub });
 
     if (!user) {

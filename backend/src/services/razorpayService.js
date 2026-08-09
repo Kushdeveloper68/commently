@@ -46,23 +46,31 @@ export async function createOrder(amountInPaise, receipt) {
 }
 
 export function verifyPaymentSignature({ orderId, paymentId, signature }) {
-  if (!process.env.RAZORPAY_KEY_SECRET) return false;
+  if (!process.env.RAZORPAY_KEY_SECRET || !signature) return false;
 
   const expected = crypto
     .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
     .update(`${orderId}|${paymentId}`)
-    .digest("hex");
+    .digest();
 
-  return expected === signature;
+  // Constant-time comparison — plain `===` on hex strings leaks timing
+  // info proportional to how many leading characters match, which is the
+  // textbook HMAC timing-attack setup. crypto.timingSafeEqual avoids that
+  // (same approach already used in middleware/verifyMetaSignature.js).
+  const sigBuf = Buffer.from(signature, "hex");
+  if (sigBuf.length !== expected.length) return false;
+  return crypto.timingSafeEqual(sigBuf, expected);
 }
 
 export function verifyWebhookSignature(rawBody, signature) {
-  if (!process.env.RAZORPAY_WEBHOOK_SECRET) return false;
+  if (!process.env.RAZORPAY_WEBHOOK_SECRET || !signature) return false;
 
   const expected = crypto
     .createHmac("sha256", process.env.RAZORPAY_WEBHOOK_SECRET)
     .update(rawBody)
-    .digest("hex");
+    .digest();
 
-  return expected === signature;
+  const sigBuf = Buffer.from(signature, "hex");
+  if (sigBuf.length !== expected.length) return false;
+  return crypto.timingSafeEqual(sigBuf, expected);
 }

@@ -17,6 +17,10 @@ export async function createPaymentOrder(req, res) {
   try {
     const { plan } = req.body;
 
+    if (typeof plan !== "string" || !plan) {
+      return res.status(400).json({ error: "Invalid plan" });
+    }
+
     if (plan === "free") {
       return res.status(400).json({ error: "Invalid plan" });
     }
