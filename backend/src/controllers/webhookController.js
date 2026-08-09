@@ -12,6 +12,7 @@ import {
 } from "../services/instagramService.js";
 import { hasReachedDmQuota } from "../middleware/planLimit.js";
 import { maybeSendQuotaAlerts } from "../services/usageAlerts.js";
+import { isFeatureEnabled } from "../services/featureFlags.js";
 
 // GET /api/webhook/instagram — Meta's one-time verification handshake
 export function verifyWebhook(req, res) {
@@ -136,7 +137,7 @@ async function processComment(igBusinessId, value) {
   let gateStatus = "none";
 
   try {
-    if (matched.followGate?.enabled) {
+    if (matched.followGate?.enabled && (await isFeatureEnabled("follow_gate", user))) {
       // Send the "please follow" prompt first — the real dmReply.message is
       // released later, when handleFollowConfirmPostback sees the tap.
       const payload = `FOLLOW_CONFIRM:${commentId}`;
@@ -253,7 +254,7 @@ async function processIncomingMessage(igBusinessId, messagingEvent, channel) {
   let gateStatus = "none";
 
   try {
-    if (matched.followGate?.enabled) {
+    if (matched.followGate?.enabled && (await isFeatureEnabled("follow_gate", user))) {
       const payload = `FOLLOW_CONFIRM_DM:${mid}`;
       await sendDirectMessageWithButton(
         token,

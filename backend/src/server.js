@@ -22,6 +22,7 @@ import paymentRoutes from "./routes/paymentRoutes.js";
 import analyticsRoutes from "./routes/analyticsRoutes.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
+import supportRoutes from "./routes/supportRoutes.js";
 import { handleRazorpayWebhook } from "./controllers/paymentController.js";
 
 const app = express();
@@ -79,6 +80,7 @@ app.use("/api/billing", paymentRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/support", supportRoutes);
 
 app.use(notFoundHandler);
 if (process.env.SENTRY_DSN) Sentry.setupExpressErrorHandler(app);

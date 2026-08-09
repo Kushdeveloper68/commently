@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import Skeleton from "react-loading-skeleton";
-import { ArrowLeft, ShieldAlert, ShieldCheck, Save } from "lucide-react";
+import { ArrowLeft, ShieldAlert, ShieldCheck, Save, Trash2 } from "lucide-react";
 import AppLayout from "../components/AppLayout.jsx";
 import { SkeletonProvider } from "../components/Skeletons.jsx";
 import Badge from "../components/ui/Badge.jsx";
@@ -10,12 +10,16 @@ import api from "../api/axios.js";
 
 export default function AdminUserDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [plan, setPlan] = useState("");
   const [override, setOverride] = useState({ enabled: false, label: "", priceInPaise: "", maxInstagramAccounts: "", maxAutomations: "", maxDmsPerMonth: "", note: "" });
   const [quota, setQuota] = useState("");
   const [saving, setSaving] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState("");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchDetail = () => {
     setLoading(true);
@@ -91,6 +95,19 @@ export default function AdminUserDetail() {
       toast.error("Couldn't adjust quota");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (deleteConfirm !== "DELETE") return;
+    setDeleting(true);
+    try {
+      await api.delete(`/admin/users/${id}`);
+      toast.success("User deleted");
+      navigate("/admin");
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Couldn't delete user");
+      setDeleting(false);
     }
   };
 
@@ -192,6 +209,33 @@ export default function AdminUserDetail() {
               {data.user.isSuspended ? "Reactivate" : "Suspend"}
             </button>
           </div>
+        </div>
+
+        {/* Delete user */}
+        <div className="card mb-6 border-error/30">
+          <h3 className="text-h2 text-error mb-2 flex items-center gap-2">
+            <Trash2 size={18} /> Delete User
+          </h3>
+          <p className="text-sm text-on-surface-variant mb-4">
+            Permanently deletes this user, their Instagram accounts, automations, interaction logs, and
+            subscription records. This can't be undone.
+          </p>
+          {!showDeleteConfirm ? (
+            <button onClick={() => setShowDeleteConfirm(true)} className="bg-error/10 border border-error/30 text-error px-4 py-2 rounded-lg text-sm hover:bg-error/20 transition-colors">
+              Delete User
+            </button>
+          ) : (
+            <div className="space-y-3 max-w-sm">
+              <label className="label-sm">Type <span className="font-mono text-on-surface">DELETE</span> to confirm</label>
+              <input className="input-field" value={deleteConfirm} onChange={(e) => setDeleteConfirm(e.target.value)} placeholder="DELETE" />
+              <div className="flex gap-2">
+                <button onClick={handleDeleteUser} disabled={deleteConfirm !== "DELETE" || deleting} className="bg-error text-white text-sm font-semibold px-4 py-2 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90">
+                  {deleting ? "Deleting..." : "Permanently delete"}
+                </button>
+                <button onClick={() => { setShowDeleteConfirm(false); setDeleteConfirm(""); }} className="btn-secondary text-sm">Cancel</button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Accounts + Automations summary */}

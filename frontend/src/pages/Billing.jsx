@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Check, Download, Star, Info } from "lucide-react";
+import { Check, Star, Info } from "lucide-react";
 import toast from "react-hot-toast";
 import Skeleton from "react-loading-skeleton";
 import AppLayout from "../components/AppLayout.jsx";
@@ -7,26 +7,36 @@ import { SkeletonProvider } from "../components/Skeletons.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import api from "../api/axios.js";
 
-const PLAN_DISPLAY = {
-  free: { label: "Free", price: "₹0", period: "forever", tagline: "Try it on one account", features: ["1 Instagram account", "1 automation", "50 DMs / month", "Comment automation only"] },
-  starter: { label: "Starter", price: "₹399", period: "/mo", tagline: "For growing creators", features: ["1 Instagram account", "5 automations", "2,000 DMs / month", "Public replies + follow-gating", "Story-reply & DM automation"] },
-  pro: { label: "Pro", price: "₹899", period: "/mo", tagline: "For agencies & multi-account", featured: true, features: ["5 Instagram accounts", "50 automations", "20,000 DMs / month", "Everything in Starter", "Analytics & leads dashboard"] },
-};
+// Builds the bullet list for a plan card from its raw limits/features data —
+// works for built-in plans (free/starter/pro) and admin-created custom
+// plans alike, since both come back in the same shape from /billing/plans.
+function buildFeatureBullets(plan) {
+  const bullets = [
+    `${plan.maxInstagramAccounts} Instagram account${plan.maxInstagramAccounts > 1 ? "s" : ""}`,
+    `${plan.maxAutomations} automation${plan.maxAutomations > 1 ? "s" : ""}`,
+    `${plan.maxDmsPerMonth.toLocaleString("en-IN")} DMs / month`,
+  ];
+  if (plan.features?.publicReply) bullets.push("Public replies");
+  if (plan.features?.followGate) bullets.push("Follow-gating");
+  if (plan.features?.analytics) bullets.push("Analytics & leads dashboard");
+  if (plan.customFeatureLabels?.length) bullets.push(...plan.customFeatureLabels);
+  return bullets;
+}
 
 export default function Billing() {
   const { user, refetch } = useAuth();
   const [loadingPlan, setLoadingPlan] = useState(null);
   const [cancelling, setCancelling] = useState(false);
   const [cancelInfo, setCancelInfo] = useState(null);
-  const [limits, setLimits] = useState(null);
+  const [plans, setPlans] = useState({});
   const [accountCount, setAccountCount] = useState(0);
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([api.get("/billing/plans"), api.get("/instagram/accounts"), api.get("/billing/history")])
-      .then(([plans, accounts, hist]) => {
-        setLimits(plans.data.plans[user?.plan]);
+      .then(([plansRes, accounts, hist]) => {
+        setPlans(plansRes.data.plans);
         setAccountCount(accounts.data.accounts.length);
         setHistory(hist.data.subscriptions);
         const active = hist.data.subscriptions.find((s) => s.status === "active");
@@ -57,17 +67,17 @@ export default function Billing() {
     return () => document.body.removeChild(script);
   }, []);
 
-  const handleUpgrade = async (plan) => {
-    setLoadingPlan(plan);
+  const handleUpgrade = async (planKey) => {
+    setLoadingPlan(planKey);
     try {
-      const { data } = await api.post("/billing/create-order", { plan });
+      const { data } = await api.post("/billing/create-order", { plan: planKey });
       const razorpay = new window.Razorpay({
         key: data.keyId,
         amount: data.amount,
         currency: data.currency,
         order_id: data.orderId,
         name: "DMLoop",
-        description: `${PLAN_DISPLAY[plan].label} Plan Subscription`,
+        description: `${plans[planKey]?.label} Plan Subscription`,
         theme: { color: "#3C7BFA" },
         handler: async (response) => {
           try {
@@ -76,7 +86,7 @@ export default function Billing() {
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,
             });
-            toast.success(`Upgraded to ${PLAN_DISPLAY[plan].label}!`);
+            toast.success(`Upgraded to ${plans[planKey]?.label}!`);
             refetch();
           } catch {
             toast.error("Payment verification failed. Contact support if money was deducted.");
@@ -91,8 +101,9 @@ export default function Billing() {
     }
   };
 
-  const dmPct = limits ? Math.min(100, Math.round(((user?.dmsSentThisMonth || 0) / limits.maxDmsPerMonth) * 100)) : 0;
-  const accountPct = limits ? Math.min(100, Math.round((accountCount / limits.maxInstagramAccounts) * 100)) : 0;
+  const currentPlan = plans[user?.plan];
+  const dmPct = currentPlan ? Math.min(100, Math.round(((user?.dmsSentThisMonth || 0) / currentPlan.maxDmsPerMonth) * 100)) : 0;
+  const accountPct = currentPlan ? Math.min(100, Math.round((accountCount / currentPlan.maxInstagramAccounts) * 100)) : 0;
 
   return (
     <AppLayout>
@@ -113,8 +124,8 @@ export default function Billing() {
                   <div className="flex justify-between items-start">
                     <div>
                       <span className="bg-primary/10 text-primary text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-widest border border-primary/20">Current Plan</span>
-                      <h3 className="text-h2 mt-3 capitalize">{PLAN_DISPLAY[user?.plan]?.label}</h3>
-                      <p className="text-body-md text-on-surface-variant">{PLAN_DISPLAY[user?.plan]?.price} {PLAN_DISPLAY[user?.plan]?.period}</p>
+                      <h3 className="text-h2 mt-3">{currentPlan?.label || user?.plan}</h3>
+                      <p className="text-body-md text-on-surface-variant">₹{(currentPlan?.priceInPaise || 0) / 100} {currentPlan?.priceInPaise > 0 ? "/mo" : ""}</p>
                     </div>
                     {user?.plan !== "free" && (
                       <div className="flex items-center gap-2 text-primary">
@@ -151,8 +162,8 @@ export default function Billing() {
             ) : (
               <>
                 <div className="space-y-6">
-                  <UsageBar label="Monthly DMs Sent" current={user?.dmsSentThisMonth || 0} max={limits?.maxDmsPerMonth} pct={dmPct} />
-                  <UsageBar label="Instagram Accounts Connected" current={accountCount} max={limits?.maxInstagramAccounts} pct={accountPct} />
+                  <UsageBar label="Monthly DMs Sent" current={user?.dmsSentThisMonth || 0} max={currentPlan?.maxDmsPerMonth} pct={dmPct} />
+                  <UsageBar label="Instagram Accounts Connected" current={accountCount} max={currentPlan?.maxInstagramAccounts} pct={accountPct} />
                 </div>
                 {dmPct >= 80 && (
                   <div className="bg-primary/5 rounded-xl p-4 flex items-center gap-4 border border-primary/10">
@@ -167,30 +178,30 @@ export default function Billing() {
           </div>
         </div>
 
-        {/* Plan comparison */}
+        {/* Plan comparison — fully dynamic, includes any admin-created custom plans */}
         <div className="space-y-stack-lg mb-12">
           <div className="text-center space-y-2 max-w-xl mx-auto">
             <h2 className="text-h1">Choose the right path</h2>
             <p className="text-on-surface-variant">Simple plans, no surprises — automations pause (not delete) if you hit a limit.</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-gutter">
-            {Object.entries(PLAN_DISPLAY).map(([key, plan]) => {
+            {Object.entries(plans).map(([key, plan]) => {
               const isCurrent = user?.plan === key;
+              const featured = key === "pro"; // highlight the built-in Pro plan; custom plans just render plainly
               return (
-                <div key={key} className={`bg-surface-container rounded-xl p-8 flex flex-col relative ${plan.featured ? "border-2 border-primary shadow-2xl shadow-primary/5" : "border border-outline-variant hover:border-outline transition-colors"}`}>
+                <div key={key} className={`bg-surface-container rounded-xl p-8 flex flex-col relative ${featured ? "border-2 border-primary shadow-2xl shadow-primary/5" : "border border-outline-variant hover:border-outline transition-colors"}`}>
                   {isCurrent && (
                     <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-on-primary text-[10px] font-black px-4 py-1 rounded-full uppercase tracking-widest shadow-lg">Current Plan</div>
                   )}
                   <div className="mb-8">
-                    <h3 className={`font-bold uppercase tracking-widest text-[12px] ${plan.featured ? "text-primary" : "text-on-surface-variant"}`}>{plan.label}</h3>
+                    <h3 className={`font-bold uppercase tracking-widest text-[12px] ${featured ? "text-primary" : "text-on-surface-variant"}`}>{plan.label}</h3>
                     <div className="mt-4 flex items-baseline gap-1">
-                      <span className="text-4xl font-black text-on-surface">{plan.price}</span>
-                      <span className="text-on-surface-variant">{plan.period}</span>
+                      <span className="text-4xl font-black text-on-surface">₹{plan.priceInPaise / 100}</span>
+                      {plan.priceInPaise > 0 && <span className="text-on-surface-variant">/mo</span>}
                     </div>
-                    <p className="mt-2 text-sm text-on-surface-variant">{plan.tagline}</p>
                   </div>
                   <ul className="space-y-4 flex-1">
-                    {plan.features.map((f) => (
+                    {buildFeatureBullets(plan).map((f) => (
                       <li key={f} className="flex items-center gap-3 text-sm">
                         <Check size={18} className="text-primary shrink-0" /> {f}
                       </li>

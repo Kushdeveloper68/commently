@@ -2,9 +2,16 @@ import mongoose from "mongoose";
 
 const subscriptionSchema = new mongoose.Schema(
   {
-    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true,
+    },
 
-    plan: { type: String, enum: ["starter", "pro"], required: true },
+    // Plain string, not an enum — can be a built-in key ("starter"/"pro") or
+    // a custom plan's key (see models/Plan.js), same reasoning as User.plan.
+    plan: { type: String, required: true },
     razorpayOrderId: { type: String },
     razorpayPaymentId: { type: String },
     razorpaySubscriptionId: { type: String },
@@ -29,7 +36,7 @@ const subscriptionSchema = new mongoose.Schema(
     autoRenew: { type: Boolean, default: true },
     cancelledAt: { type: Date },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 export default mongoose.model("Subscription", subscriptionSchema);

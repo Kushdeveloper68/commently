@@ -40,9 +40,19 @@ export async function getPlanLimitsByKey(key) {
 }
 
 // Every plan a user could see on the public pricing page: the 3 built-ins
-// plus any admin-created custom plans marked publicly visible.
+// plus any admin-created custom plans marked publicly visible AND currently
+// within their valid window (limited-time offers auto-hide once expired —
+// existing subscribers already on the plan keep their access regardless).
 export async function getAllVisiblePlans() {
-  const customPlans = await Plan.find({ isActive: true, isPubliclyVisible: true }).lean();
+  const now = new Date();
+  const customPlans = await Plan.find({
+    isActive: true,
+    isPubliclyVisible: true,
+    $and: [
+      { $or: [{ validFrom: null }, { validFrom: { $lte: now } }] },
+      { $or: [{ validUntil: null }, { validUntil: { $gte: now } }] },
+    ],
+  }).lean();
   const result = { ...PLAN_LIMITS };
   for (const p of customPlans) result[p.key] = p;
   return result;

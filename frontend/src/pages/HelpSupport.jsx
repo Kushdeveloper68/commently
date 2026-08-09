@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
+import toast from "react-hot-toast";
 import {
-  Search, Rocket, Bot, Link2, CreditCard, ChevronRight, Mail, ChevronDown,
+  Search, Rocket, Bot, Link2, CreditCard, ChevronRight, Mail, ChevronDown, Star, Send,
 } from "lucide-react";
 import AppLayout from "../components/AppLayout.jsx";
+import api from "../api/axios.js";
 
 const CATEGORIES = [
   {
@@ -123,6 +125,10 @@ export default function HelpSupport() {
         </div>
       </section>
 
+      <section className="mb-12">
+        <ContactForm />
+      </section>
+
       <section className="bg-surface-container/40 rounded-2xl p-8 sm:p-12 border border-outline-variant flex flex-col sm:flex-row items-center justify-between gap-6">
         <div>
           <h2 className="text-h1 mb-2">Still have questions?</h2>
@@ -133,5 +139,66 @@ export default function HelpSupport() {
         </a>
       </section>
     </AppLayout>
+  );
+}
+
+function ContactForm() {
+  const [type, setType] = useState("support");
+  const [subject, setSubject] = useState("");
+  const [message, setMessage] = useState("");
+  const [rating, setRating] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!subject.trim() || !message.trim()) return toast.error("Please fill in both fields");
+    setSubmitting(true);
+    try {
+      await api.post("/support/message", { type, subject, message, rating: type === "feedback" ? rating || undefined : undefined });
+      toast.success(type === "support" ? "Support request sent — we'll get back to you soon." : "Thanks for the feedback!");
+      setSubject("");
+      setMessage("");
+      setRating(0);
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Couldn't send your message");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="bg-surface-container/40 rounded-2xl p-8 sm:p-12 border border-outline-variant">
+      <h2 className="text-h1 mb-2">{type === "support" ? "Report an issue" : "Share feedback"}</h2>
+      <p className="text-on-surface-variant text-body-md mb-6">
+        {type === "support" ? "Tell us what's going wrong — we read every message." : "What's working, what's not, what you wish existed."}
+      </p>
+
+      <div className="flex gap-2 mb-6">
+        <button onClick={() => setType("support")} className={`px-4 py-2 rounded-lg text-sm font-medium border ${type === "support" ? "bg-primary text-on-primary border-primary" : "border-outline-variant text-on-surface-variant"}`}>
+          Report a problem
+        </button>
+        <button onClick={() => setType("feedback")} className={`px-4 py-2 rounded-lg text-sm font-medium border ${type === "feedback" ? "bg-primary text-on-primary border-primary" : "border-outline-variant text-on-surface-variant"}`}>
+          Give feedback
+        </button>
+      </div>
+
+      <div className="space-y-4 max-w-xl">
+        <input className="input-field" placeholder="Subject" value={subject} onChange={(e) => setSubject(e.target.value)} />
+        <textarea className="input-field h-28 resize-none" placeholder={type === "support" ? "What happened? Steps to reproduce help a lot." : "Your thoughts..."} value={message} onChange={(e) => setMessage(e.target.value)} />
+
+        {type === "feedback" && (
+          <div className="flex items-center gap-1">
+            {[1, 2, 3, 4, 5].map((n) => (
+              <button key={n} onClick={() => setRating(n)}>
+                <Star size={22} className={n <= rating ? "text-tertiary fill-tertiary" : "text-outline-variant"} />
+              </button>
+            ))}
+          </div>
+        )}
+
+        <button onClick={handleSubmit} disabled={submitting} className="btn-primary flex items-center gap-2 px-6 py-3">
+          <Send size={16} /> {submitting ? "Sending..." : "Send"}
+        </button>
+      </div>
+    </div>
   );
 }

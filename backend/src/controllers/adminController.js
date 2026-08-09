@@ -4,8 +4,13 @@ import Automation from "../models/Automation.js";
 import InteractionLog from "../models/InteractionLog.js";
 import Subscription from "../models/Subscription.js";
 import Plan from "../models/Plan.js";
+import SupportMessage from "../models/SupportMessage.js";
+import AdminAuditLog from "../models/AdminAuditLog.js";
+import FeatureFlag from "../models/FeatureFlag.js";
 import { PLAN_LIMITS } from "../config/planLimits.js";
 import { getEffectivePlanLimits } from "../services/planResolver.js";
+import { logAdminAction } from "../services/auditLog.js";
+import { deleteUserCascade } from "../services/userDeletion.js";
 
 // ── Platform overview ────────────────────────────────────────────────────
 
@@ -26,6 +31,7 @@ export async function getPlatformOverview(req, res) {
     planCounts,
     revenueThisMonth,
     suspendedCount,
+    openSupportCount,
   ] = await Promise.all([
     User.countDocuments({}),
     User.countDocuments({ createdAt: { $gte: monthStart } }),
@@ -41,6 +47,7 @@ export async function getPlatformOverview(req, res) {
       { $group: { _id: null, total: { $sum: "$amount" } } },
     ]),
     User.countDocuments({ isSuspended: true }),
+    SupportMessage.countDocuments({ type: "support", status: { $ne: "resolved" } }),
   ]);
 
   res.json({
@@ -50,6 +57,36 @@ export async function getPlatformOverview(req, res) {
     dms: { total: totalDmsSent, thisMonth: dmsSentThisMonth },
     revenueThisMonthInPaise: revenueThisMonth[0]?.total || 0,
     planDistribution: planCounts.map((p) => ({ plan: p._id, count: p.count })),
+    openSupportCount,
+  });
+}
+
+// GET /api/admin/stats?days=30 — daily trend stats (signup rate, automation
+// creation rate, etc), for the "average per day" view
+export async function getPlatformStats(req, res) {
+  const days = Math.min(90, parseInt(req.query.days) || 30);
+  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+  const [signupSeries, automationSeries] = await Promise.all([
+    User.aggregate([
+      { $match: { createdAt: { $gte: since } } },
+      { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } }, count: { $sum: 1 } } },
+      { $sort: { _id: 1 } },
+    ]),
+    Automation.aggregate([
+      { $match: { createdAt: { $gte: since } } },
+      { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } }, count: { $sum: 1 } } },
+      { $sort: { _id: 1 } },
+    ]),
+  ]);
+
+  const totalSignups = signupSeries.reduce((s, r) => s + r.count, 0);
+  const totalAutomations = automationSeries.reduce((s, r) => s + r.count, 0);
+
+  res.json({
+    days,
+    signups: { series: signupSeries.map((r) => ({ date: r._id, count: r.count })), avgPerDay: Math.round((totalSignups / days) * 10) / 10, total: totalSignups },
+    automationsCreated: { series: automationSeries.map((r) => ({ date: r._id, count: r.count })), avgPerDay: Math.round((totalAutomations / days) * 10) / 10, total: totalAutomations },
   });
 }
 
@@ -130,35 +167,25 @@ export async function changeUserPlan(req, res) {
   const isValidPlan = PLAN_LIMITS[plan] || (await Plan.exists({ key: plan }));
   if (!isValidPlan) return res.status(400).json({ error: "Unknown plan key" });
 
+  const before = await User.findById(req.params.id).select("plan");
   const user = await User.findByIdAndUpdate(req.params.id, { plan }, { new: true });
   if (!user) return res.status(404).json({ error: "User not found" });
+
+  await logAdminAction(req.user._id, "user.plan_change", "User", user._id, { from: before?.plan, to: plan });
 
   res.json({ success: true, plan: user.plan });
 }
 
-// PATCH /api/admin/users/:id/override — sets or clears a negotiated per-user deal
-// Body: { enabled, label, priceInPaise, maxInstagramAccounts, maxAutomations, maxDmsPerMonth, features, note }
+// PATCH /api/admin/users/:id/override
 export async function setUserOverride(req, res) {
   const { enabled, label, priceInPaise, maxInstagramAccounts, maxAutomations, maxDmsPerMonth, features, note } =
     req.body;
 
-  const user = await User.findByIdAndUpdate(
-    req.params.id,
-    {
-      customPlanOverride: {
-        enabled: !!enabled,
-        label,
-        priceInPaise,
-        maxInstagramAccounts,
-        maxAutomations,
-        maxDmsPerMonth,
-        features,
-        note,
-      },
-    },
-    { new: true },
-  );
+  const override = { enabled: !!enabled, label, priceInPaise, maxInstagramAccounts, maxAutomations, maxDmsPerMonth, features, note };
+  const user = await User.findByIdAndUpdate(req.params.id, { customPlanOverride: override }, { new: true });
   if (!user) return res.status(404).json({ error: "User not found" });
+
+  await logAdminAction(req.user._id, "user.override_set", "User", user._id, override);
 
   res.json({ success: true, customPlanOverride: user.customPlanOverride });
 }
@@ -174,38 +201,54 @@ export async function setUserSuspension(req, res) {
   const user = await User.findByIdAndUpdate(req.params.id, update, { new: true });
   if (!user) return res.status(404).json({ error: "User not found" });
 
+  await logAdminAction(req.user._id, suspended ? "user.suspend" : "user.reactivate", "User", user._id, { reason });
+
   res.json({ success: true, isSuspended: user.isSuspended });
 }
 
-// PATCH /api/admin/users/:id/quota — manual adjustment, e.g. goodwill reset
-// Body: { dmsSentThisMonth: number }
+// PATCH /api/admin/users/:id/quota — { dmsSentThisMonth: number }
 export async function adjustUserQuota(req, res) {
   const { dmsSentThisMonth } = req.body;
   if (typeof dmsSentThisMonth !== "number" || dmsSentThisMonth < 0) {
     return res.status(400).json({ error: "dmsSentThisMonth must be a non-negative number" });
   }
 
+  const before = await User.findById(req.params.id).select("dmsSentThisMonth");
   const user = await User.findByIdAndUpdate(req.params.id, { dmsSentThisMonth }, { new: true });
   if (!user) return res.status(404).json({ error: "User not found" });
+
+  await logAdminAction(req.user._id, "user.quota_adjust", "User", user._id, { from: before?.dmsSentThisMonth, to: dmsSentThisMonth });
 
   res.json({ success: true, dmsSentThisMonth: user.dmsSentThisMonth });
 }
 
-// ── Custom plans ─────────────────────────────────────────────────────────
+// DELETE /api/admin/users/:id — permanent, cascades everything
+export async function deleteUser(req, res) {
+  const user = await User.findById(req.params.id);
+  if (!user) return res.status(404).json({ error: "User not found" });
 
-// GET /api/admin/plans — built-in + all custom plans (including inactive, for admin visibility)
-export async function listPlans(req, res) {
-  const customPlans = await Plan.find({}).sort({ createdAt: -1 });
-  res.json({
-    builtIn: PLAN_LIMITS,
-    custom: customPlans,
-  });
+  if (user._id.equals(req.user._id)) {
+    return res.status(400).json({ error: "You can't delete your own account from here." });
+  }
+
+  await logAdminAction(req.user._id, "user.delete", "User", user._id, { email: user.email, name: user.name });
+  await deleteUserCascade(user._id);
+
+  res.json({ success: true });
 }
 
-// POST /api/admin/plans — create a new custom plan tier
+// ── Custom plans ─────────────────────────────────────────────────────────
+
+export async function listPlans(req, res) {
+  const customPlans = await Plan.find({}).sort({ createdAt: -1 });
+  res.json({ builtIn: PLAN_LIMITS, custom: customPlans });
+}
+
 export async function createPlan(req, res) {
-  const { key, label, priceInPaise, maxInstagramAccounts, maxAutomations, maxDmsPerMonth, features, isPubliclyVisible } =
-    req.body;
+  const {
+    key, label, priceInPaise, maxInstagramAccounts, maxAutomations, maxDmsPerMonth,
+    features, customFeatureLabels, isPubliclyVisible, validFrom, validUntil,
+  } = req.body;
 
   if (!key || !label) return res.status(400).json({ error: "key and label are required" });
   if (PLAN_LIMITS[key]) return res.status(400).json({ error: "That key collides with a built-in plan" });
@@ -219,9 +262,15 @@ export async function createPlan(req, res) {
       maxAutomations,
       maxDmsPerMonth,
       features,
+      customFeatureLabels,
       isPubliclyVisible: !!isPubliclyVisible,
+      validFrom: validFrom || undefined,
+      validUntil: validUntil || undefined,
       createdBy: req.user._id,
     });
+
+    await logAdminAction(req.user._id, "plan.create", "Plan", plan._id, { key: plan.key, label: plan.label });
+
     res.status(201).json({ plan });
   } catch (err) {
     if (err.code === 11000) return res.status(409).json({ error: "A plan with that key already exists" });
@@ -229,17 +278,10 @@ export async function createPlan(req, res) {
   }
 }
 
-// PATCH /api/admin/plans/:key — edit a custom plan
 export async function updatePlan(req, res) {
   const allowedFields = [
-    "label",
-    "priceInPaise",
-    "maxInstagramAccounts",
-    "maxAutomations",
-    "maxDmsPerMonth",
-    "features",
-    "isActive",
-    "isPubliclyVisible",
+    "label", "priceInPaise", "maxInstagramAccounts", "maxAutomations", "maxDmsPerMonth",
+    "features", "customFeatureLabels", "isActive", "isPubliclyVisible", "validFrom", "validUntil",
   ];
   const update = {};
   for (const field of allowedFields) {
@@ -249,13 +291,96 @@ export async function updatePlan(req, res) {
   const plan = await Plan.findOneAndUpdate({ key: req.params.key }, update, { new: true });
   if (!plan) return res.status(404).json({ error: "Plan not found" });
 
+  await logAdminAction(req.user._id, "plan.update", "Plan", plan._id, { key: plan.key, changes: update });
+
   res.json({ plan });
 }
 
-// DELETE /api/admin/plans/:key — soft delete (deactivate, don't break existing subscribers)
 export async function deactivatePlan(req, res) {
   const plan = await Plan.findOneAndUpdate({ key: req.params.key }, { isActive: false }, { new: true });
   if (!plan) return res.status(404).json({ error: "Plan not found" });
+
+  await logAdminAction(req.user._id, "plan.deactivate", "Plan", plan._id, { key: plan.key });
+
+  res.json({ success: true });
+}
+
+// ── Support messages & feedback ─────────────────────────────────────────
+
+// GET /api/admin/messages?type=support&status=new&page=1
+export async function listSupportMessages(req, res) {
+  const page = Math.max(1, parseInt(req.query.page) || 1);
+  const limit = Math.min(100, parseInt(req.query.limit) || 20);
+  const { type, status } = req.query;
+
+  const filter = {};
+  if (type) filter.type = type;
+  if (status) filter.status = status;
+
+  const [messages, total] = await Promise.all([
+    SupportMessage.find(filter).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).populate("user", "name email"),
+    SupportMessage.countDocuments(filter),
+  ]);
+
+  res.json({ messages, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } });
+}
+
+// PATCH /api/admin/messages/:id — { status?, adminNote? }
+export async function updateSupportMessage(req, res) {
+  const { status, adminNote } = req.body;
+  const update = {};
+  if (status) update.status = status;
+  if (adminNote !== undefined) update.adminNote = adminNote;
+
+  const message = await SupportMessage.findByIdAndUpdate(req.params.id, update, { new: true });
+  if (!message) return res.status(404).json({ error: "Message not found" });
+
+  res.json({ message });
+}
+
+// ── Audit log ────────────────────────────────────────────────────────────
+
+// GET /api/admin/audit-log?page=1
+export async function listAuditLog(req, res) {
+  const page = Math.max(1, parseInt(req.query.page) || 1);
+  const limit = Math.min(100, parseInt(req.query.limit) || 30);
+
+  const [logs, total] = await Promise.all([
+    AdminAuditLog.find({}).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).populate("admin", "name email"),
+    AdminAuditLog.countDocuments({}),
+  ]);
+
+  res.json({ logs, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } });
+}
+
+// ── Feature flags ────────────────────────────────────────────────────────
+
+export async function listFeatureFlags(req, res) {
+  const flags = await FeatureFlag.find({}).sort({ key: 1 });
+  res.json({ flags });
+}
+
+// POST /api/admin/feature-flags — create or update (upsert by key)
+export async function upsertFeatureFlag(req, res) {
+  const { key, label, description, enabledGlobally, enabledForUserIds } = req.body;
+  if (!key || !label) return res.status(400).json({ error: "key and label are required" });
+
+  const flag = await FeatureFlag.findOneAndUpdate(
+    { key: key.toLowerCase().trim() },
+    { label, description, enabledGlobally, enabledForUserIds: enabledForUserIds || [] },
+    { new: true, upsert: true },
+  );
+
+  await logAdminAction(req.user._id, "feature_flag.upsert", "FeatureFlag", flag._id, { key: flag.key, enabledGlobally });
+
+  res.json({ flag });
+}
+
+export async function deleteFeatureFlag(req, res) {
+  const flag = await FeatureFlag.findOneAndDelete({ key: req.params.key });
+  if (!flag) return res.status(404).json({ error: "Flag not found" });
+
+  await logAdminAction(req.user._id, "feature_flag.delete", "FeatureFlag", flag._id, { key: flag.key });
 
   res.json({ success: true });
 }
