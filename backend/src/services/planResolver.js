@@ -25,7 +25,15 @@ export async function getEffectivePlanLimits(user) {
     return PLAN_LIMITS[user.plan];
   }
 
-  const dbPlan = await Plan.findOne({ key: user.plan, isActive: true }).lean();
+  // Deliberately NOT filtering by isActive here: isActive controls whether a
+  // plan can be newly purchased/assigned (see getPlanLimitsByKey below), not
+  // whether users already on it keep their access. Deactivating a plan is a
+  // "stop selling this" switch, not a "kick current subscribers off it"
+  // switch — if it required isActive: true, deactivating a plan would
+  // instantly downgrade every paying subscriber on it to Free, regardless of
+  // how much time is left on their periodEnd. Fall back to Free only if the
+  // plan record is truly gone (e.g. deleted outright).
+  const dbPlan = await Plan.findOne({ key: user.plan }).lean();
   if (dbPlan) return dbPlan;
 
   return PLAN_LIMITS.free;

@@ -594,8 +594,18 @@ function FeatureFlagsTab() {
           {flags.map((f) => (
             <div key={f._id} className="card flex items-center justify-between">
               <div>
-                <p className="font-semibold text-sm">{f.label} <span className="text-[11px] text-on-surface-variant font-mono">({f.key})</span></p>
+                <p className="font-semibold text-sm flex items-center gap-2">
+                  {f.label} <span className="text-[11px] text-on-surface-variant font-mono">({f.key})</span>
+                  {!f.wired && (
+                    <span className="inline-flex items-center gap-1 text-[10px] text-amber-500 border border-amber-500/40 rounded-full px-2 py-0.5">
+                      <AlertTriangle size={10} /> not wired to any feature
+                    </span>
+                  )}
+                </p>
                 {f.description && <p className="text-xs text-on-surface-variant mt-1">{f.description}</p>}
+                {!f.wired && (
+                  <p className="text-xs text-amber-500 mt-1">This key isn't checked anywhere in code — toggling it won't control anything.</p>
+                )}
               </div>
               <button onClick={() => handleToggle(f)} className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${f.enabledGlobally ? "bg-primary" : "bg-outline-variant"}`}>
                 <span className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform ${f.enabledGlobally ? "translate-x-5" : ""}`} />
@@ -611,16 +621,50 @@ function FeatureFlagsTab() {
 }
 
 function NewFlagModal({ onClose, onCreated }) {
+  const [wiredKeys, setWiredKeys] = useState([]);
+  const [loadingKeys, setLoadingKeys] = useState(true);
   const [key, setKey] = useState("");
+  const [customKey, setCustomKey] = useState("");
+  const [useCustomKey, setUseCustomKey] = useState(false);
   const [label, setLabel] = useState("");
   const [description, setDescription] = useState("");
   const [saving, setSaving] = useState(false);
 
+  useEffect(() => {
+    api
+      .get("/admin/feature-flags/wired-keys")
+      .then(({ data }) => setWiredKeys(data.keys))
+      .catch(() => toast.error("Couldn't load available flag keys"))
+      .finally(() => setLoadingKeys(false));
+  }, []);
+
+  const effectiveKey = useCustomKey ? customKey : key;
+  const selectedWired = wiredKeys.find((k) => k.key === key);
+
+  const handleKeySelect = (e) => {
+    const val = e.target.value;
+    if (val === "__custom__") {
+      setUseCustomKey(true);
+      setKey("");
+      return;
+    }
+    setUseCustomKey(false);
+    setKey(val);
+    const match = wiredKeys.find((k) => k.key === val);
+    if (match && !description) setDescription(match.description);
+    if (!label) setLabel(match ? val.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "");
+  };
+
   const handleSubmit = async () => {
-    if (!key.trim() || !label.trim()) return toast.error("Key and label are required");
+    if (!effectiveKey.trim() || !label.trim()) return toast.error("Key and label are required");
     setSaving(true);
     try {
-      await api.post("/admin/feature-flags", { key: key.toLowerCase().replace(/\s+/g, "_"), label, description, enabledGlobally: true });
+      await api.post("/admin/feature-flags", {
+        key: effectiveKey.toLowerCase().replace(/\s+/g, "_"),
+        label,
+        description,
+        enabledGlobally: true,
+      });
       toast.success("Flag created");
       onCreated();
     } catch (err) {
@@ -639,8 +683,32 @@ function NewFlagModal({ onClose, onCreated }) {
         </div>
         <div className="space-y-3">
           <div>
-            <label className="label-sm">Key (used in code, e.g. follow_gate)</label>
-            <input className="input-field text-sm" value={key} onChange={(e) => setKey(e.target.value)} />
+            <label className="label-sm">Key (what this controls in code)</label>
+            {loadingKeys ? (
+              <Skeleton height={38} className="rounded-lg" />
+            ) : (
+              <select className="input-field text-sm" value={useCustomKey ? "__custom__" : key} onChange={handleKeySelect}>
+                <option value="" disabled>Select what to flag…</option>
+                {wiredKeys.map((k) => (
+                  <option key={k.key} value={k.key}>{k.key}</option>
+                ))}
+                <option value="__custom__">Other / not-yet-wired key…</option>
+              </select>
+            )}
+            {selectedWired && <p className="text-xs text-on-surface-variant mt-1">{selectedWired.description}</p>}
+            {useCustomKey && (
+              <>
+                <input
+                  className="input-field text-sm mt-2"
+                  placeholder="e.g. some_future_flag"
+                  value={customKey}
+                  onChange={(e) => setCustomKey(e.target.value)}
+                />
+                <p className="text-xs text-amber-500 mt-1 flex items-center gap-1">
+                  <AlertTriangle size={12} /> This key isn't wired to any feature yet — creating it won't control anything until a developer adds an isFeatureEnabled() check for it in code.
+                </p>
+              </>
+            )}
           </div>
           <div>
             <label className="label-sm">Label</label>
@@ -651,7 +719,7 @@ function NewFlagModal({ onClose, onCreated }) {
             <input className="input-field text-sm" value={description} onChange={(e) => setDescription(e.target.value)} />
           </div>
         </div>
-        <button onClick={handleSubmit} disabled={saving} className="btn-primary w-full mt-6 py-2.5">
+        <button onClick={handleSubmit} disabled={saving || !effectiveKey.trim()} className="btn-primary w-full mt-6 py-2.5">
           {saving ? "Creating..." : "Create Flag"}
         </button>
       </div>

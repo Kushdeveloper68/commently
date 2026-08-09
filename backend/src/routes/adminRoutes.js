@@ -18,6 +18,7 @@ import {
   updateSupportMessage,
   listAuditLog,
   listFeatureFlags,
+  listWiredFeatureFlagKeys,
   upsertFeatureFlag,
   deleteFeatureFlag,
 } from "../controllers/adminController.js";
@@ -48,6 +49,7 @@ router.patch("/messages/:id", updateSupportMessage);
 router.get("/audit-log", listAuditLog);
 
 router.get("/feature-flags", listFeatureFlags);
+router.get("/feature-flags/wired-keys", listWiredFeatureFlagKeys);
 router.post("/feature-flags", upsertFeatureFlag);
 router.delete("/feature-flags/:key", deleteFeatureFlag);
 

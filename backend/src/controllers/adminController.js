@@ -9,6 +9,7 @@ import AdminAuditLog from "../models/AdminAuditLog.js";
 import FeatureFlag from "../models/FeatureFlag.js";
 import { PLAN_LIMITS } from "../config/planLimits.js";
 import { getEffectivePlanLimits } from "../services/planResolver.js";
+import { WIRED_FEATURE_FLAGS } from "../services/featureFlags.js";
 import { logAdminAction } from "../services/auditLog.js";
 import { deleteUserCascade } from "../services/userDeletion.js";
 
@@ -357,7 +358,16 @@ export async function listAuditLog(req, res) {
 
 export async function listFeatureFlags(req, res) {
   const flags = await FeatureFlag.find({}).sort({ key: 1 });
-  res.json({ flags });
+  const wiredKeys = new Set(WIRED_FEATURE_FLAGS.map((f) => f.key));
+  const withWiredFlag = flags.map((f) => ({ ...f.toObject(), wired: wiredKeys.has(f.key) }));
+  res.json({ flags: withWiredFlag });
+}
+
+// GET /api/admin/feature-flags/wired-keys — the keys that actually control
+// something in code, so the "New Flag" form can offer a picker instead of a
+// free-text field an admin can typo their way into a useless flag with.
+export async function listWiredFeatureFlagKeys(req, res) {
+  res.json({ keys: WIRED_FEATURE_FLAGS });
 }
 
 // POST /api/admin/feature-flags — create or update (upsert by key)

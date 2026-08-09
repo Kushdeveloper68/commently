@@ -26,6 +26,15 @@ export async function createPaymentOrder(req, res) {
       return res.status(400).json({ error: "Invalid plan" });
     }
 
+    // Built-in plans (free/starter/pro) have no isPubliclyVisible field and
+    // are always self-purchasable. Custom DB plans default isPubliclyVisible
+    // to false (see models/Plan.js) — those are admin-assign-only (e.g.
+    // negotiated enterprise pricing) and must never be reachable via a
+    // direct API call, even if someone guesses/leaks the plan key.
+    if (limits.isPubliclyVisible === false) {
+      return res.status(403).json({ error: "This plan isn't available for self-purchase. Contact us to get set up." });
+    }
+
     const order = await createOrder(limits.priceInPaise, `ord_${req.user._id}`.slice(0, 40));
 
     await Subscription.create({
@@ -63,8 +72,20 @@ export async function verifyPayment(req, res) {
       return res.status(400).json({ error: "Payment verification failed" });
     }
 
+    const existing = await Subscription.findOne({ razorpayOrderId: razorpay_order_id, user: req.user._id });
+    if (!existing) return res.status(404).json({ error: "Subscription record not found" });
+
+    // Idempotency guard: if this order was already verified and activated
+    // (retry, double-click, network resend), don't touch periodEnd again —
+    // otherwise every duplicate call pushes it another 30 days out for free.
+    // The Razorpay webhook backup path already had this guard; this brings
+    // this endpoint in line with it.
+    if (existing.status === "active") {
+      return res.json({ success: true, plan: existing.plan });
+    }
+
     const subscription = await Subscription.findOneAndUpdate(
-      { razorpayOrderId: razorpay_order_id, user: req.user._id },
+      { razorpayOrderId: razorpay_order_id, user: req.user._id, status: { $ne: "active" } },
       {
         razorpayPaymentId: razorpay_payment_id,
         status: "active", // was "paid" — analytics/overview and renewal checks query "active"
@@ -74,7 +95,12 @@ export async function verifyPayment(req, res) {
       { new: true }
     );
 
-    if (!subscription) return res.status(404).json({ error: "Subscription record not found" });
+    // Lost the race to a concurrent verify/webhook call — treat as success,
+    // don't re-extend.
+    if (!subscription) {
+      const already = await Subscription.findOne({ razorpayOrderId: razorpay_order_id, user: req.user._id });
+      return res.json({ success: true, plan: already?.plan ?? existing.plan });
+    }
 
     await User.findByIdAndUpdate(req.user._id, {
       plan: subscription.plan,
