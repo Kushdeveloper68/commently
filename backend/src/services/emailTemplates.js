@@ -74,3 +74,20 @@ export function paymentReceiptEmail(user, subscription) {
     `),
   };
 }
+
+// Sent once (guarded by customPlanOverride.renewalReminderSentAt) when a
+// user's negotiated custom plan window ends without being renewed.
+export function customPlanExpiredEmail(user, override) {
+  return {
+    to: user.email,
+    subject: `Your ${override.label || "custom"} plan has ended`,
+    html: wrapper(`
+      <p>Hi ${user.name},</p>
+      <p>Your negotiated <strong>${override.label || "custom"}</strong> plan ended today. Your account has
+      moved to whatever plan/subscription you had underneath it (or Free, if none).</p>
+      <p>Want to keep your same custom terms? You can renew it in one click from Billing — the price
+      and limits stay exactly as negotiated.</p>
+      <p><a href="https://dmloop.app/billing" style="display:inline-block; background:#2954ff; color:#fff; padding:10px 20px; border-radius:8px; text-decoration:none; font-weight:600; margin-top:8px;">Renew my plan</a></p>
+    `),
+  };
+}

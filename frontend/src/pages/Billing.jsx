@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Check, Star, Info } from "lucide-react";
+import { Check, Star, Info, Sparkles, AlertTriangle } from "lucide-react";
 import toast from "react-hot-toast";
 import Skeleton from "react-loading-skeleton";
 import AppLayout from "../components/AppLayout.jsx";
@@ -23,9 +23,18 @@ function buildFeatureBullets(plan) {
   return bullets;
 }
 
+function formatDate(d) {
+  return new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
+}
+
+function daysUntil(d) {
+  return Math.max(0, Math.ceil((new Date(d) - Date.now()) / (24 * 60 * 60 * 1000)));
+}
+
 export default function Billing() {
   const { user, refetch } = useAuth();
   const [loadingPlan, setLoadingPlan] = useState(null);
+  const [renewing, setRenewing] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [cancelInfo, setCancelInfo] = useState(null);
   const [plans, setPlans] = useState({});
@@ -67,33 +76,53 @@ export default function Billing() {
     return () => document.body.removeChild(script);
   }, []);
 
+  // If the user has time left on an active subscription, switching plans
+  // right now overwrites it immediately (no proration, no "wait until it
+  // ends") — this is a real money/access decision, so we ask before firing
+  // the Razorpay checkout, not after.
+  const confirmOverwriteIfNeeded = () => {
+    if (!cancelInfo || cancelInfo.autoRenew === false) return true; // nothing active, or already set to lapse — nothing to overwrite
+    const remaining = daysUntil(cancelInfo.periodEnd);
+    if (remaining <= 0) return true;
+    return window.confirm(
+      `You still have ${remaining} day${remaining === 1 ? "" : "s"} left on your current ${cancelInfo.plan} plan ` +
+        `(ends ${formatDate(cancelInfo.periodEnd)}). Switching now replaces it immediately — the remaining time won't ` +
+        `carry over. Continue?`,
+    );
+  };
+
+  const runCheckout = ({ orderData, description, planLabel }) => {
+    const razorpay = new window.Razorpay({
+      key: orderData.keyId,
+      amount: orderData.amount,
+      currency: orderData.currency,
+      order_id: orderData.orderId,
+      name: "DMLoop",
+      description,
+      theme: { color: "#3C7BFA" },
+      handler: async (response) => {
+        try {
+          await api.post("/billing/verify", {
+            razorpay_order_id: response.razorpay_order_id,
+            razorpay_payment_id: response.razorpay_payment_id,
+            razorpay_signature: response.razorpay_signature,
+          });
+          toast.success(planLabel ? `Upgraded to ${planLabel}!` : "Payment successful!");
+          refetch();
+        } catch {
+          toast.error("Payment verification failed. Contact support if money was deducted.");
+        }
+      },
+    });
+    razorpay.open();
+  };
+
   const handleUpgrade = async (planKey) => {
+    if (!confirmOverwriteIfNeeded()) return;
     setLoadingPlan(planKey);
     try {
       const { data } = await api.post("/billing/create-order", { plan: planKey });
-      const razorpay = new window.Razorpay({
-        key: data.keyId,
-        amount: data.amount,
-        currency: data.currency,
-        order_id: data.orderId,
-        name: "DMLoop",
-        description: `${plans[planKey]?.label} Plan Subscription`,
-        theme: { color: "#3C7BFA" },
-        handler: async (response) => {
-          try {
-            await api.post("/billing/verify", {
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature,
-            });
-            toast.success(`Upgraded to ${plans[planKey]?.label}!`);
-            refetch();
-          } catch {
-            toast.error("Payment verification failed. Contact support if money was deducted.");
-          }
-        },
-      });
-      razorpay.open();
+      runCheckout({ orderData: data, description: `${plans[planKey]?.label} Plan Subscription`, planLabel: plans[planKey]?.label });
     } catch (err) {
       toast.error(err.response?.data?.error || "Failed to start checkout");
     } finally {
@@ -101,7 +130,28 @@ export default function Billing() {
     }
   };
 
-  const currentPlan = plans[user?.plan];
+  const handleRenewCustomPlan = async () => {
+    if (!confirmOverwriteIfNeeded()) return;
+    setRenewing(true);
+    try {
+      const { data } = await api.post("/billing/renew-custom-plan");
+      runCheckout({
+        orderData: data,
+        description: `${user?.customPlanOverrideStatus?.label || "Custom"} Plan Renewal`,
+        planLabel: user?.customPlanOverrideStatus?.label,
+      });
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Failed to start renewal");
+    } finally {
+      setRenewing(false);
+    }
+  };
+
+  // effectiveLimits reflects what's ACTUALLY active right now, accounting
+  // for a negotiated override — plans[user.plan] alone would miss that
+  // entirely, since an active override never changes the `plan` field.
+  const currentPlan = user?.effectiveLimits || plans[user?.plan];
+  const overrideStatus = user?.customPlanOverrideStatus;
   const dmPct = currentPlan ? Math.min(100, Math.round(((user?.dmsSentThisMonth || 0) / currentPlan.maxDmsPerMonth) * 100)) : 0;
   const accountPct = currentPlan ? Math.min(100, Math.round((accountCount / currentPlan.maxInstagramAccounts) * 100)) : 0;
 
@@ -113,6 +163,32 @@ export default function Billing() {
           <p className="text-body-md text-on-surface-variant mt-2">Manage your subscription, usage, and invoices from one place.</p>
         </div>
 
+        {overrideStatus?.state === "scheduled" && (
+          <div className="mb-8 bg-primary/5 border border-primary/20 rounded-xl p-4 flex items-center gap-4">
+            <Sparkles size={20} className="text-primary shrink-0" />
+            <p className="text-sm text-on-surface-variant">
+              You have a custom <strong className="text-on-surface">{overrideStatus.label}</strong> plan starting on{" "}
+              <strong className="text-on-surface">{formatDate(overrideStatus.effectiveFrom)}</strong>. Your current plan stays
+              active until then.
+            </p>
+          </div>
+        )}
+
+        {overrideStatus?.state === "expired" && (
+          <div className="mb-8 bg-error/5 border border-error/20 rounded-xl p-4 flex items-center gap-4">
+            <AlertTriangle size={20} className="text-error shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm text-on-surface">
+                Your custom <strong>{overrideStatus.label}</strong> plan ended on {formatDate(overrideStatus.periodEnd)}.
+              </p>
+              <p className="text-xs text-on-surface-variant mt-0.5">Renew to keep the same negotiated price and limits.</p>
+            </div>
+            <button onClick={handleRenewCustomPlan} disabled={renewing} className="btn-primary shrink-0">
+              {renewing ? "Loading..." : `Renew · ₹${(overrideStatus.priceInPaise || 0) / 100}`}
+            </button>
+          </div>
+        )}
+
         {/* Current plan + usage */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-gutter mb-12">
           <div className="lg:col-span-5 bg-surface-container border border-outline-variant rounded-xl p-padding-card flex flex-col justify-between hover:border-primary transition-colors">
@@ -123,31 +199,40 @@ export default function Billing() {
                 <div className="space-y-4">
                   <div className="flex justify-between items-start">
                     <div>
-                      <span className="bg-primary/10 text-primary text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-widest border border-primary/20">Current Plan</span>
+                      <span className="bg-primary/10 text-primary text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-widest border border-primary/20">
+                        {currentPlan?.isCustomOverride ? "Custom Plan" : "Current Plan"}
+                      </span>
                       <h3 className="text-h2 mt-3">{currentPlan?.label || user?.plan}</h3>
                       <p className="text-body-md text-on-surface-variant">₹{(currentPlan?.priceInPaise || 0) / 100} {currentPlan?.priceInPaise > 0 ? "/mo" : ""}</p>
                     </div>
-                    {user?.plan !== "free" && (
+                    {(user?.plan !== "free" || currentPlan?.isCustomOverride) && (
                       <div className="flex items-center gap-2 text-primary">
                         <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
                         <span className="text-label-sm font-bold uppercase tracking-wider">Active</span>
                       </div>
                     )}
                   </div>
-                  {cancelInfo && (
+                  {currentPlan?.isCustomOverride && currentPlan.periodEnd && (
+                    <div className="pt-4 border-t border-outline-variant/30">
+                      <p className="text-sm text-on-surface-variant">
+                        Renews on <span className="text-on-surface font-semibold">{formatDate(currentPlan.periodEnd)}</span>
+                      </p>
+                    </div>
+                  )}
+                  {!currentPlan?.isCustomOverride && cancelInfo && (
                     <div className="pt-4 border-t border-outline-variant/30">
                       <p className="text-sm text-on-surface-variant">
                         {cancelInfo.autoRenew === false ? (
-                          <>Moves to Free on <span className="text-on-surface font-semibold">{new Date(cancelInfo.periodEnd).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}</span></>
+                          <>Moves to Free on <span className="text-on-surface font-semibold">{formatDate(cancelInfo.periodEnd)}</span></>
                         ) : (
-                          <>Renews on <span className="text-on-surface font-semibold">{new Date(cancelInfo.periodEnd).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}</span></>
+                          <>Renews on <span className="text-on-surface font-semibold">{formatDate(cancelInfo.periodEnd)}</span></>
                         )}
                       </p>
                     </div>
                   )}
                 </div>
-                {user?.plan !== "free" && cancelInfo?.autoRenew !== false && (
-                  <button onClick={handleCancel} disabled={cancelling} className="mt-6 text-sm font-medium text-error hover:underline disabled:opacity-50 self-start">
+                {!currentPlan?.isCustomOverride && user?.plan !== "free" && cancelInfo?.autoRenew !== false && (
+                  <button onClick={handleCancel} disabled={cancelling} className="mt-6 text-label-sm text-on-surface-variant hover:text-error transition-colors self-start">
                     {cancelling ? "Cancelling..." : "Cancel subscription"}
                   </button>
                 )}
@@ -186,7 +271,7 @@ export default function Billing() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-gutter">
             {Object.entries(plans).map(([key, plan]) => {
-              const isCurrent = user?.plan === key;
+              const isCurrent = user?.plan === key && !currentPlan?.isCustomOverride;
               const featured = key === "pro"; // highlight the built-in Pro plan; custom plans just render plainly
               return (
                 <div key={key} className={`bg-surface-container rounded-xl p-8 flex flex-col relative ${featured ? "border-2 border-primary shadow-2xl shadow-primary/5" : "border border-outline-variant hover:border-outline transition-colors"}`}>
@@ -260,7 +345,7 @@ export default function Billing() {
                     history.map((h) => (
                       <tr key={h._id} className="hover:bg-surface-container-high transition-colors">
                         <td className="px-6 py-4 text-sm text-on-surface">{new Date(h.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</td>
-                        <td className="px-6 py-4 text-sm text-on-surface capitalize">{h.plan}</td>
+                        <td className="px-6 py-4 text-sm text-on-surface capitalize">{h.plan === "custom_override" ? "Custom plan renewal" : h.plan}</td>
                         <td className="px-6 py-4 text-sm text-on-surface font-mono">₹{(h.amount / 100).toLocaleString("en-IN")}</td>
                         <td className="px-6 py-4 text-sm">
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${

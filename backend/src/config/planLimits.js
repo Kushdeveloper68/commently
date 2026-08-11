@@ -7,7 +7,7 @@ export const PLAN_LIMITS = {
     priceInPaise: 0,
     maxInstagramAccounts: 1,
     maxAutomations: 1,
-    maxDmsPerMonth: 50,
+    maxDmsPerMonth: 1000,
     features: {
       publicReply: false,
       followGate: false,
@@ -16,10 +16,10 @@ export const PLAN_LIMITS = {
   },
   starter: {
     label: "Starter",
-    priceInPaise: 39900, // ₹399/month
+    priceInPaise:9900, // ₹99/month
     maxInstagramAccounts: 1,
     maxAutomations: 5,
-    maxDmsPerMonth: 2000,
+    maxDmsPerMonth: 10000,
     features: {
       publicReply: true,
       followGate: true,
@@ -28,10 +28,10 @@ export const PLAN_LIMITS = {
   },
   pro: {
     label: "Pro",
-    priceInPaise: 89900, // ₹899/month
+    priceInPaise:19900, // ₹899/month
     maxInstagramAccounts: 5,
-    maxAutomations: 50,
-    maxDmsPerMonth: 20000,
+    maxAutomations: 20,
+    maxDmsPerMonth: 22000,
     features: {
       publicReply: true,
       followGate: true,

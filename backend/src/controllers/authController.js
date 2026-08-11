@@ -1,6 +1,7 @@
 import { OAuth2Client } from "google-auth-library";
 import User from "../models/User.js";
 import { deleteUserCascade } from "../services/userDeletion.js";
+import { getEffectivePlanLimits, getCustomOverrideStatus } from "../services/planResolver.js";
 import {
   signAccessToken,
   signRefreshToken,
@@ -79,7 +80,8 @@ export async function googleLogin(req, res) {
     }
 
     setAuthCookies(res, user._id);
-    res.json({ user: sanitizeUser(user) });
+    const effectiveLimits = await getEffectivePlanLimits(user);
+    res.json({ user: sanitizeUser(user, effectiveLimits) });
   } catch (err) {
     console.error("Google login error:", err.message);
     res.status(401).json({ error: "Google authentication failed" });
@@ -97,7 +99,8 @@ export async function refreshToken(req, res) {
     if (!user) return res.status(401).json({ error: "User not found" });
 
     setAuthCookies(res, user._id);
-    res.json({ user: sanitizeUser(user) });
+    const effectiveLimits = await getEffectivePlanLimits(user);
+    res.json({ user: sanitizeUser(user, effectiveLimits) });
   } catch (err) {
     res.status(401).json({ error: "Invalid refresh token" });
   }
@@ -117,7 +120,8 @@ export async function logout(req, res) {
 
 // GET /api/auth/me
 export async function getMe(req, res) {
-  res.json({ user: sanitizeUser(req.user) });
+  const effectiveLimits = await getEffectivePlanLimits(req.user);
+  res.json({ user: sanitizeUser(req.user, effectiveLimits) });
 }
 
 // PATCH /api/auth/profile — updates name and timezone (email is tied to the
@@ -129,7 +133,8 @@ export async function updateProfile(req, res) {
   if (timezone) update.timezone = timezone;
 
   const user = await User.findByIdAndUpdate(req.user._id, update, { new: true });
-  res.json({ user: sanitizeUser(user) });
+  const effectiveLimits = await getEffectivePlanLimits(user);
+  res.json({ user: sanitizeUser(user, effectiveLimits) });
 }
 
 // PATCH /api/auth/notification-preferences — actually gates whether quota
@@ -142,7 +147,8 @@ export async function updateNotificationPreferences(req, res) {
   if (typeof billingReceipts === "boolean") update["emailPreferences.billingReceipts"] = billingReceipts;
 
   const user = await User.findByIdAndUpdate(req.user._id, update, { new: true });
-  res.json({ user: sanitizeUser(user) });
+  const effectiveLimits = await getEffectivePlanLimits(user);
+  res.json({ user: sanitizeUser(user, effectiveLimits) });
 }
 
 // DELETE /api/auth/account — permanent, cascades everything. Requires the
@@ -160,7 +166,7 @@ export async function deleteAccount(req, res) {
   }
 }
 
-function sanitizeUser(user) {
+function sanitizeUser(user, effectiveLimits) {
   return {
     id: user._id,
     name: user.name,
@@ -168,9 +174,19 @@ function sanitizeUser(user) {
     avatarUrl: user.avatarUrl,
     plan: user.plan,
     planRenewsAt: user.planRenewsAt,
+    planStartedAt: user.planStartedAt,
     role: user.role,
     timezone: user.timezone,
     dmsSentThisMonth: user.dmsSentThisMonth,
     emailPreferences: user.emailPreferences,
+    // What's ACTUALLY in effect right now (accounts for negotiated-override
+    // scheduling — see planResolver.js) — the frontend should use this for
+    // "your current plan" displays instead of re-deriving it from `plan`.
+    effectiveLimits,
+    // The override's own scheduling state (scheduled/active/expired),
+    // independent of what's currently effective — lets the billing page
+    // show "custom plan starts on X" or "ended, renew" even while a
+    // different plan is the one actually in effect.
+    customPlanOverrideStatus: getCustomOverrideStatus(user),
   };
 }

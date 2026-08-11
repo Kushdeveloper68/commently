@@ -2,14 +2,20 @@ import { PLAN_LIMITS } from "../config/planLimits.js";
 import Plan from "../models/Plan.js";
 
 // Resolves what limits actually apply to a given user, checking in order:
-// 1. A per-user negotiated override (admin-set, highest priority)
+// 1. A per-user negotiated override (admin-set) — but ONLY while `now` is
+//    inside its [effectiveFrom, periodEnd) window. Outside that window
+//    (not started yet, or expired) this falls through to whatever the
+//    user's underlying plan/subscription says instead — see
+//    getCustomOverrideStatus() below for surfacing the window state itself
+//    (e.g. "starts in 3 days" / "expired, renew") independent of what's
+//    currently effective.
 // 2. A built-in plan (free/starter/pro — static, no DB round-trip)
 // 3. A DB-backed custom plan tier (admin-created, shared across users)
 // 4. Free, as a safety-net fallback if `user.plan` points at something that
 //    no longer exists (e.g. a custom plan got deleted)
 export async function getEffectivePlanLimits(user) {
-  if (user.customPlanOverride?.enabled) {
-    const o = user.customPlanOverride;
+  const o = user.customPlanOverride;
+  if (o?.enabled && isOverrideInWindow(o)) {
     return {
       label: o.label || "Custom",
       priceInPaise: o.priceInPaise ?? 0,
@@ -18,6 +24,7 @@ export async function getEffectivePlanLimits(user) {
       maxDmsPerMonth: o.maxDmsPerMonth ?? 50,
       features: o.features || { publicReply: true, followGate: true, analytics: true },
       isCustomOverride: true,
+      periodEnd: o.periodEnd ?? null,
     };
   }
 
@@ -37,6 +44,36 @@ export async function getEffectivePlanLimits(user) {
   if (dbPlan) return dbPlan;
 
   return PLAN_LIMITS.free;
+}
+
+function isOverrideInWindow(o, now = new Date()) {
+  const started = !o.effectiveFrom || o.effectiveFrom <= now;
+  const notEnded = !o.periodEnd || o.periodEnd > now;
+  return started && notEnded;
+}
+
+// Describes the negotiated override's scheduling state on its own terms —
+// independent of whether it's the thing currently in effect. Used by the
+// billing page / admin panel to show "starts on X" or "ended, renew"
+// banners even when getEffectivePlanLimits() above is (correctly) serving
+// the user's underlying plan instead because the override's window hasn't
+// started yet or has passed.
+export function getCustomOverrideStatus(user) {
+  const o = user.customPlanOverride;
+  if (!o?.enabled) return null;
+
+  const now = new Date();
+  let state = "active";
+  if (o.effectiveFrom && o.effectiveFrom > now) state = "scheduled";
+  else if (o.periodEnd && o.periodEnd <= now) state = "expired";
+
+  return {
+    state, // "scheduled" | "active" | "expired"
+    label: o.label || "Custom",
+    priceInPaise: o.priceInPaise ?? 0,
+    effectiveFrom: o.effectiveFrom ?? null,
+    periodEnd: o.periodEnd ?? null,
+  };
 }
 
 // Resolves a plan by its key directly (not tied to a user) — used when

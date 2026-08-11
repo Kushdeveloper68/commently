@@ -168,6 +168,7 @@ function UsersTab() {
             <tr className="bg-surface-container-high text-[11px] text-on-surface-variant uppercase tracking-wider border-b border-outline-variant">
               <th className="px-4 py-3">User</th>
               <th className="px-4 py-3">Plan</th>
+              <th className="px-4 py-3">Plan Ends</th>
               <th className="px-4 py-3">DMs this month</th>
               <th className="px-4 py-3">Status</th>
               <th className="px-4 py-3">Joined</th>
@@ -175,9 +176,9 @@ function UsersTab() {
           </thead>
           <tbody className="divide-y divide-outline-variant">
             {loading ? (
-              <tr><td colSpan={5} className="px-4 py-4"><Skeleton height={40} /></td></tr>
+              <tr><td colSpan={6} className="px-4 py-4"><Skeleton height={40} /></td></tr>
             ) : users.length === 0 ? (
-              <tr><td colSpan={5} className="px-4 py-10 text-center text-on-surface-variant text-sm">No users found.</td></tr>
+              <tr><td colSpan={6} className="px-4 py-10 text-center text-on-surface-variant text-sm">No users found.</td></tr>
             ) : (
               users.map((u) => (
                 <tr key={u.id} className="hover:bg-surface-container-high transition-colors">
@@ -194,7 +195,18 @@ function UsersTab() {
                   </td>
                   <td className="px-4 py-3">
                     <span className="capitalize text-sm">{u.plan}</span>
-                    {u.hasOverride && <Badge variant="primary">Custom</Badge>}
+                    {u.hasOverride && (
+                      <Badge variant="primary">
+                        {u.customPlanOverrideStatus?.state === "scheduled" ? "Custom (scheduled)" : u.customPlanOverrideStatus?.state === "expired" ? "Custom (expired)" : "Custom"}
+                      </Badge>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-xs text-on-surface-variant">
+                    {u.customPlanOverrideStatus?.state === "active"
+                      ? u.customPlanOverrideStatus.periodEnd && new Date(u.customPlanOverrideStatus.periodEnd).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
+                      : u.planRenewsAt
+                        ? new Date(u.planRenewsAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
+                        : "—"}
                   </td>
                   <td className="px-4 py-3 text-sm font-mono">{u.dmsSentThisMonth.toLocaleString("en-IN")}</td>
                   <td className="px-4 py-3">

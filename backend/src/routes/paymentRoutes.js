@@ -3,6 +3,7 @@ import { requireAuth } from "../middleware/auth.js";
 import {
   getPlans,
   createPaymentOrder,
+  renewCustomPlanOrder,
   verifyPayment,
   getBillingHistory,
   cancelSubscription,
@@ -12,6 +13,7 @@ const router = express.Router();
 
 router.get("/plans", getPlans);
 router.post("/create-order", requireAuth, createPaymentOrder);
+router.post("/renew-custom-plan", requireAuth, renewCustomPlanOrder);
 router.post("/verify", requireAuth, verifyPayment);
 router.get("/history", requireAuth, getBillingHistory);
 router.post("/cancel", requireAuth, cancelSubscription);

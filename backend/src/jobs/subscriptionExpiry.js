@@ -1,6 +1,7 @@
 import cron from "node-cron";
 import Subscription from "../models/Subscription.js";
 import User from "../models/User.js";
+import { CUSTOM_OVERRIDE_PLAN_KEY } from "../config/constants.js";
 
 // Downgrades ANY subscription past its periodEnd, not just cancelled ones —
 // there's no recurring auto-charge happening today (see cancelSubscription's
@@ -21,6 +22,18 @@ export async function downgradeExpiredSubscriptions() {
   for (const sub of expired) {
     sub.status = "cancelled";
     await sub.save();
+
+    if (sub.plan === CUSTOM_OVERRIDE_PLAN_KEY) {
+      // This Subscription doc is just the renewal-payment receipt for a
+      // negotiated customPlanOverride (see paymentController.js) — it never
+      // set user.plan when it activated, so it shouldn't touch user.plan
+      // when it expires either. Whether the override itself is still in
+      // effect is governed by customPlanOverride.periodEnd directly (kept
+      // in sync with this Subscription's periodEnd at activation/renewal
+      // time) — see planResolver.js and jobs/customPlanScheduler.js.
+      console.log(`📅 Custom-plan renewal receipt ${sub._id} expired for user ${sub.user} (handled via customPlanOverride, not user.plan)`);
+      continue;
+    }
 
     await User.findByIdAndUpdate(sub.user, { plan: "free", planRenewsAt: null });
     console.log(`⬇️  Downgraded user ${sub.user} to Free (subscription ${sub._id} expired)`);

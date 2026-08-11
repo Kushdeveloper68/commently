@@ -8,7 +8,7 @@ import SupportMessage from "../models/SupportMessage.js";
 import AdminAuditLog from "../models/AdminAuditLog.js";
 import FeatureFlag from "../models/FeatureFlag.js";
 import { PLAN_LIMITS } from "../config/planLimits.js";
-import { getEffectivePlanLimits } from "../services/planResolver.js";
+import { getEffectivePlanLimits, getCustomOverrideStatus } from "../services/planResolver.js";
 import { WIRED_FEATURE_FLAGS } from "../services/featureFlags.js";
 import { logAdminAction } from "../services/auditLog.js";
 import { deleteUserCascade } from "../services/userDeletion.js";
@@ -114,17 +114,26 @@ export async function listUsers(req, res) {
   ]);
 
   res.json({
-    users: users.map((u) => ({
-      id: u._id,
-      name: u.name,
-      email: u.email,
-      avatarUrl: u.avatarUrl,
-      plan: u.plan,
-      hasOverride: u.customPlanOverride?.enabled || false,
-      dmsSentThisMonth: u.dmsSentThisMonth,
-      isSuspended: u.isSuspended,
-      createdAt: u.createdAt,
-    })),
+    users: users.map((u) => {
+      const overrideStatus = getCustomOverrideStatus(u);
+      return {
+        id: u._id,
+        name: u.name,
+        email: u.email,
+        avatarUrl: u.avatarUrl,
+        plan: u.plan,
+        hasOverride: u.customPlanOverride?.enabled || false,
+        // Every user's current period, so admins can see "took this plan on
+        // X, ends on Y" at a glance — whether that's a self-serve
+        // subscription or a negotiated override overlay.
+        planStartedAt: u.planStartedAt,
+        planRenewsAt: u.planRenewsAt,
+        customPlanOverrideStatus: overrideStatus, // { state: "scheduled"|"active"|"expired", effectiveFrom, periodEnd, ... } | null
+        dmsSentThisMonth: u.dmsSentThisMonth,
+        isSuspended: u.isSuspended,
+        createdAt: u.createdAt,
+      };
+    }),
     pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
   });
 }
@@ -153,6 +162,9 @@ export async function getUserDetail(req, res) {
       isSuspended: user.isSuspended,
       suspendedReason: user.suspendedReason,
       customPlanOverride: user.customPlanOverride,
+      customPlanOverrideStatus: getCustomOverrideStatus(user),
+      planStartedAt: user.planStartedAt,
+      planRenewsAt: user.planRenewsAt,
       createdAt: user.createdAt,
     },
     effectiveLimits: limits,
@@ -182,10 +194,45 @@ export async function changeUserPlan(req, res) {
 
 // PATCH /api/admin/users/:id/override
 export async function setUserOverride(req, res) {
-  const { enabled, label, priceInPaise, maxInstagramAccounts, maxAutomations, maxDmsPerMonth, features, note } =
-    req.body;
+  const {
+    enabled,
+    label,
+    priceInPaise,
+    maxInstagramAccounts,
+    maxAutomations,
+    maxDmsPerMonth,
+    features,
+    note,
+    effectiveFrom,
+    durationDays,
+  } = req.body;
 
-  const override = { enabled: !!enabled, label, priceInPaise, maxInstagramAccounts, maxAutomations, maxDmsPerMonth, features, note };
+  // effectiveFrom defaults to "now" (immediate) if the admin doesn't pick a
+  // future date — durationDays defaults to a 30-day cycle. periodEnd is
+  // computed here rather than left to the frontend so it's always
+  // consistent with whatever effectiveFrom/durationDays were actually saved.
+  const from = effectiveFrom ? new Date(effectiveFrom) : new Date();
+  const days = Number.isFinite(Number(durationDays)) && Number(durationDays) > 0 ? Number(durationDays) : 30;
+  const periodEnd = new Date(from.getTime() + days * 24 * 60 * 60 * 1000);
+
+  const override = {
+    enabled: !!enabled,
+    label,
+    priceInPaise,
+    maxInstagramAccounts,
+    maxAutomations,
+    maxDmsPerMonth,
+    features,
+    note,
+    effectiveFrom: from,
+    periodEnd,
+    durationDays: days,
+    // Reset renewal bookkeeping whenever an admin (re)configures the deal —
+    // a fresh admin edit shouldn't be treated as "already activated" by the
+    // scheduler cron, and any pending renewal-reminder guard is stale now.
+    activatedAt: null,
+    renewalReminderSentAt: null,
+  };
   const user = await User.findByIdAndUpdate(req.params.id, { customPlanOverride: override }, { new: true });
   if (!user) return res.status(404).json({ error: "User not found" });
 

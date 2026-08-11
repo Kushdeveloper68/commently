@@ -4,6 +4,24 @@ import { getPlanLimitsByKey, getAllVisiblePlans } from "../services/planResolver
 import { createOrder, verifyPaymentSignature, verifyWebhookSignature } from "../services/razorpayService.js";
 import { sendEmailAsync } from "../services/emailService.js";
 import { subscriptionCancelledEmail, paymentReceiptEmail } from "../services/emailTemplates.js";
+import { CUSTOM_OVERRIDE_PLAN_KEY } from "../config/constants.js";
+
+const SUBSCRIPTION_DURATION_MS = 30 * 24 * 60 * 60 * 1000;
+
+// Marks any other currently-active Subscription for this user as
+// superseded. Without this, buying a new plan while one is already active
+// leaves TWO "active" Subscription docs around — confusing in billing
+// history/admin views, and a real correctness bug: the daily expiry cron
+// (jobs/subscriptionExpiry.js) downgrades a user to Free whenever ANY of
+// their "active" subscriptions passes its periodEnd, so the user could get
+// wrongly downgraded when their OLD (now-irrelevant) subscription's
+// periodEnd arrives, even though the new one they paid for is still valid.
+async function supersedeOtherActiveSubscriptions(userId, keepSubscriptionId) {
+  await Subscription.updateMany(
+    { user: userId, status: "active", _id: { $ne: keepSubscriptionId } },
+    { status: "cancelled", cancelledAt: new Date(), autoRenew: false },
+  );
+}
 
 // GET /api/billing/plans — public pricing data for the pricing page
 // (built-in plans + any admin-created custom plans marked publicly visible)
@@ -21,7 +39,7 @@ export async function createPaymentOrder(req, res) {
       return res.status(400).json({ error: "Invalid plan" });
     }
 
-    if (plan === "free") {
+    if (plan === "free" || plan === CUSTOM_OVERRIDE_PLAN_KEY) {
       return res.status(400).json({ error: "Invalid plan" });
     }
 
@@ -61,6 +79,42 @@ export async function createPaymentOrder(req, res) {
   }
 }
 
+// POST /api/billing/renew-custom-plan — renews the caller's own negotiated
+// override at the SAME price/terms an admin set up for them. Only exists
+// for users who already have a customPlanOverride configured (enabled or
+// lapsed) — there's nothing to "renew" otherwise.
+export async function renewCustomPlanOrder(req, res) {
+  try {
+    const override = req.user.customPlanOverride;
+    if (!override?.enabled) {
+      return res.status(400).json({ error: "You don't have a custom plan to renew." });
+    }
+    if (!override.priceInPaise) {
+      return res.status(400).json({ error: "This custom plan has no price set — contact support to renew." });
+    }
+
+    const order = await createOrder(override.priceInPaise, `ord_${req.user._id}`.slice(0, 40));
+
+    await Subscription.create({
+      user: req.user._id,
+      plan: CUSTOM_OVERRIDE_PLAN_KEY,
+      razorpayOrderId: order.id,
+      amount: override.priceInPaise,
+      status: "created",
+    });
+
+    res.json({
+      orderId: order.id,
+      amount: order.amount,
+      currency: order.currency,
+      keyId: process.env.RAZORPAY_KEY_ID,
+    });
+  } catch (err) {
+    console.error("Custom plan renewal order failed:", JSON.stringify(err, null, 2));
+    res.status(502).json({ error: "Could not start checkout. Please try again." });
+  }
+}
+
 // POST /api/billing/verify  { razorpay_order_id, razorpay_payment_id, razorpay_signature }
 export async function verifyPayment(req, res) {
   try {
@@ -88,13 +142,23 @@ export async function verifyPayment(req, res) {
       return res.json({ success: true, plan: existing.plan });
     }
 
+    const periodStart = new Date();
+    // Negotiated-plan renewals use the override's OWN cycle length (set by
+    // the admin — could be 7, 30, 60 days, whatever was negotiated), not
+    // the generic 30-day self-serve cycle.
+    const durationMs =
+      existing.plan === CUSTOM_OVERRIDE_PLAN_KEY
+        ? (req.user.customPlanOverride?.durationDays || 30) * 24 * 60 * 60 * 1000
+        : SUBSCRIPTION_DURATION_MS;
+    const periodEnd = new Date(periodStart.getTime() + durationMs);
+
     const subscription = await Subscription.findOneAndUpdate(
       { razorpayOrderId: razorpay_order_id, user: req.user._id, status: { $ne: "active" } },
       {
         razorpayPaymentId: razorpay_payment_id,
         status: "active", // was "paid" — analytics/overview and renewal checks query "active"
-        periodStart: new Date(),
-        periodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        periodStart,
+        periodEnd,
       },
       { new: true }
     );
@@ -106,10 +170,25 @@ export async function verifyPayment(req, res) {
       return res.json({ success: true, plan: already?.plan ?? existing.plan });
     }
 
-    await User.findByIdAndUpdate(req.user._id, {
-      plan: subscription.plan,
-      planRenewsAt: subscription.periodEnd,
-    });
+    await supersedeOtherActiveSubscriptions(req.user._id, subscription._id);
+
+    if (subscription.plan === CUSTOM_OVERRIDE_PLAN_KEY) {
+      // Negotiated-plan renewal: extend the SAME override window rather
+      // than touching `user.plan` — the override was never tied to a
+      // purchasable plan key in the first place (see planResolver.js).
+      await User.findByIdAndUpdate(req.user._id, {
+        "customPlanOverride.effectiveFrom": periodStart,
+        "customPlanOverride.periodEnd": periodEnd,
+        "customPlanOverride.activatedAt": periodStart,
+        "customPlanOverride.renewalReminderSentAt": null,
+      });
+    } else {
+      await User.findByIdAndUpdate(req.user._id, {
+        plan: subscription.plan,
+        planStartedAt: periodStart,
+        planRenewsAt: periodEnd,
+      });
+    }
 
     if (req.user.emailPreferences?.billingReceipts !== false) sendEmailAsync(paymentReceiptEmail(req.user, subscription));
 
@@ -141,16 +220,37 @@ export async function handleRazorpayWebhook(req, res) {
 
       const subscription = await Subscription.findOne({ razorpayOrderId: orderId });
       if (subscription && subscription.status !== "active") {
+        const periodStart = new Date();
+
+        let durationMs = SUBSCRIPTION_DURATION_MS;
+        if (subscription.plan === CUSTOM_OVERRIDE_PLAN_KEY) {
+          const owner = await User.findById(subscription.user).select("customPlanOverride.durationDays");
+          durationMs = (owner?.customPlanOverride?.durationDays || 30) * 24 * 60 * 60 * 1000;
+        }
+        const periodEnd = new Date(periodStart.getTime() + durationMs);
+
         subscription.status = "active";
         subscription.razorpayPaymentId = paymentId;
-        subscription.periodStart = new Date();
-        subscription.periodEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+        subscription.periodStart = periodStart;
+        subscription.periodEnd = periodEnd;
         await subscription.save();
 
-        await User.findByIdAndUpdate(subscription.user, {
-          plan: subscription.plan,
-          planRenewsAt: subscription.periodEnd,
-        });
+        await supersedeOtherActiveSubscriptions(subscription.user, subscription._id);
+
+        if (subscription.plan === CUSTOM_OVERRIDE_PLAN_KEY) {
+          await User.findByIdAndUpdate(subscription.user, {
+            "customPlanOverride.effectiveFrom": periodStart,
+            "customPlanOverride.periodEnd": periodEnd,
+            "customPlanOverride.activatedAt": periodStart,
+            "customPlanOverride.renewalReminderSentAt": null,
+          });
+        } else {
+          await User.findByIdAndUpdate(subscription.user, {
+            plan: subscription.plan,
+            planStartedAt: periodStart,
+            planRenewsAt: periodEnd,
+          });
+        }
 
         console.log(`✅ Webhook reconciled subscription for order ${orderId}`);
       }

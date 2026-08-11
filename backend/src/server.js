@@ -14,6 +14,7 @@ import { sanitizeInput } from "./middleware/sanitizeInput.js";
 import { startTokenRefreshCron } from "./jobs/tokenRefresh.js";
 import { startSubscriptionExpiryCron } from "./jobs/subscriptionExpiry.js";
 import { startUsageResetCron } from "./jobs/usageReset.js";
+import { startCustomPlanScheduler } from "./jobs/customPlanScheduler.js";
 
 import authRoutes from "./routes/authRoutes.js";
 import instagramRoutes from "./routes/instagramRoutes.js";
@@ -101,4 +102,5 @@ connectDB().then(() => {
   startTokenRefreshCron();
   startSubscriptionExpiryCron();
   startUsageResetCron();
+  startCustomPlanScheduler();
 });

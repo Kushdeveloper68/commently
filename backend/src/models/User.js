@@ -26,13 +26,15 @@ const userSchema = new mongoose.Schema(
       default: "free",
     },
     planRenewsAt: { type: Date },
+    planStartedAt: { type: Date }, // when the CURRENT plan/subscription period began — shown to admins so they can see "took this plan on X"
     razorpayCustomerId: { type: String },
 
     // Admin-set negotiated deal for THIS one user specifically — takes
-    // priority over whatever `plan` says. Different from a custom Plan
-    // (which is a reusable tier multiple users could be on).
+    // priority over whatever `plan`/Subscription says, but only while
+    // `now` falls inside [effectiveFrom, periodEnd). Different from a
+    // custom Plan (which is a reusable tier multiple users could be on).
     customPlanOverride: {
-      enabled: { type: Boolean, default: false },
+      enabled: { type: Boolean, default: false }, // master kill switch — admin can permanently turn it off regardless of dates
       label: { type: String, default: "Custom" },
       priceInPaise: { type: Number },
       maxInstagramAccounts: { type: Number },
@@ -44,6 +46,16 @@ const userSchema = new mongoose.Schema(
         analytics: { type: Boolean, default: true },
       },
       note: { type: String }, // admin's internal reason, not shown to the user
+
+      // Scheduling/expiry — without these, an admin-assigned custom plan
+      // would apply immediately and forever, with no renewal ever asked
+      // for. See services/planResolver.js's getEffectivePlanLimits for how
+      // these gate whether the override is actually in effect right now.
+      effectiveFrom: { type: Date, default: Date.now }, // when this deal starts overriding whatever the user currently has
+      periodEnd: { type: Date }, // when this cycle ends — null means "never expires" (legacy/no-expiry deals)
+      durationDays: { type: Number, default: 30 }, // used to compute periodEnd on create/renewal
+      activatedAt: { type: Date }, // bookkeeping: last time the scheduler actually flipped this override "live" (superseded any concurrent Subscription) — prevents redoing that on every cron tick
+      renewalReminderSentAt: { type: Date }, // idempotency guard for the "your custom plan ended, renew" email
     },
 
     isSuspended: { type: Boolean, default: false },

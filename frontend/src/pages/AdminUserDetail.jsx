@@ -2,11 +2,29 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import Skeleton from "react-loading-skeleton";
-import { ArrowLeft, ShieldAlert, ShieldCheck, Save, Trash2 } from "lucide-react";
+import { ArrowLeft, ShieldAlert, ShieldCheck, Save, Trash2, Clock } from "lucide-react";
 import AppLayout from "../components/AppLayout.jsx";
 import { SkeletonProvider } from "../components/Skeletons.jsx";
 import Badge from "../components/ui/Badge.jsx";
 import api from "../api/axios.js";
+
+function formatDate(d) {
+  if (!d) return "—";
+  return new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+}
+
+// <input type="date"> needs yyyy-mm-dd — this also naturally handles null/undefined
+function toDateInputValue(d) {
+  if (!d) return "";
+  const dt = new Date(d);
+  return dt.toISOString().slice(0, 10);
+}
+
+const OVERRIDE_STATUS_BADGE = {
+  scheduled: { variant: "primary", label: "Scheduled" },
+  active: { variant: "success", label: "Active" },
+  expired: { variant: "error", label: "Expired — awaiting renewal" },
+};
 
 export default function AdminUserDetail() {
   const { id } = useParams();
@@ -14,7 +32,17 @@ export default function AdminUserDetail() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [plan, setPlan] = useState("");
-  const [override, setOverride] = useState({ enabled: false, label: "", priceInPaise: "", maxInstagramAccounts: "", maxAutomations: "", maxDmsPerMonth: "", note: "" });
+  const [override, setOverride] = useState({
+    enabled: false,
+    label: "",
+    priceInPaise: "",
+    maxInstagramAccounts: "",
+    maxAutomations: "",
+    maxDmsPerMonth: "",
+    note: "",
+    effectiveFrom: "",
+    durationDays: "30",
+  });
   const [quota, setQuota] = useState("");
   const [saving, setSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState("");
@@ -30,9 +58,20 @@ export default function AdminUserDetail() {
       if (data.user.customPlanOverride) {
         const o = data.user.customPlanOverride;
         setOverride({
-          enabled: o.enabled || false, label: o.label || "", priceInPaise: o.priceInPaise ?? "",
-          maxInstagramAccounts: o.maxInstagramAccounts ?? "", maxAutomations: o.maxAutomations ?? "",
-          maxDmsPerMonth: o.maxDmsPerMonth ?? "", note: o.note || "",
+          enabled: o.enabled || false,
+          label: o.label || "",
+          // Stored in paise (smallest unit) like everywhere else in the
+          // app — the input field is rupees, so divide for display. Saving
+          // does the inverse (×100) below. Without this round-trip, typing
+          // "1499" here saved literally 1499 paise (₹14.99) instead of
+          // ₹1499 (149900 paise).
+          priceInPaise: o.priceInPaise != null ? o.priceInPaise / 100 : "",
+          maxInstagramAccounts: o.maxInstagramAccounts ?? "",
+          maxAutomations: o.maxAutomations ?? "",
+          maxDmsPerMonth: o.maxDmsPerMonth ?? "",
+          note: o.note || "",
+          effectiveFrom: toDateInputValue(o.effectiveFrom) || toDateInputValue(new Date()),
+          durationDays: o.durationDays ?? 30,
         });
       }
     }).catch(() => toast.error("Couldn't load user")).finally(() => setLoading(false));
@@ -58,15 +97,21 @@ export default function AdminUserDetail() {
     try {
       await api.patch(`/admin/users/${id}/override`, {
         ...override,
-        priceInPaise: override.priceInPaise === "" ? undefined : Number(override.priceInPaise),
+        // Rupees entered in the form → paise for storage (×100) — matches
+        // the Plan-creation form's convention (see UsersTab/CreatePlanModal:
+        // `priceInPaise: Number(form.priceInPaise) * 100`).
+        priceInPaise: override.priceInPaise === "" ? undefined : Math.round(Number(override.priceInPaise) * 100),
         maxInstagramAccounts: override.maxInstagramAccounts === "" ? undefined : Number(override.maxInstagramAccounts),
         maxAutomations: override.maxAutomations === "" ? undefined : Number(override.maxAutomations),
         maxDmsPerMonth: override.maxDmsPerMonth === "" ? undefined : Number(override.maxDmsPerMonth),
+        durationDays: override.durationDays === "" ? undefined : Number(override.durationDays),
+        // effectiveFrom stays as the yyyy-mm-dd string — the backend parses
+        // it with `new Date(...)`, which handles that format fine.
       });
       toast.success("Override saved");
       fetchDetail();
-    } catch {
-      toast.error("Couldn't save override");
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Couldn't save override");
     } finally {
       setSaving(false);
     }
@@ -119,6 +164,9 @@ export default function AdminUserDetail() {
     );
   }
 
+  const overrideStatus = data.user.customPlanOverrideStatus; // { state, label, effectiveFrom, periodEnd, priceInPaise } | null
+  const statusBadge = overrideStatus && OVERRIDE_STATUS_BADGE[overrideStatus.state];
+
   return (
     <AppLayout>
       <SkeletonProvider>
@@ -152,6 +200,14 @@ export default function AdminUserDetail() {
               Effective limits right now: {data.effectiveLimits.maxInstagramAccounts} accounts · {data.effectiveLimits.maxAutomations} automations · {data.effectiveLimits.maxDmsPerMonth.toLocaleString("en-IN")} DMs/mo
               {data.effectiveLimits.isCustomOverride && " (custom override active)"}
             </p>
+            {/* Underlying self-serve subscription period, independent of any override overlay */}
+            <div className="pt-3 border-t border-outline-variant/50 flex items-center gap-2 text-xs text-on-surface-variant">
+              <Clock size={13} />
+              Took this plan on <span className="text-on-surface font-medium">{formatDate(data.user.planStartedAt)}</span>
+              {data.user.planRenewsAt && (
+                <> · ends <span className="text-on-surface font-medium">{formatDate(data.user.planRenewsAt)}</span></>
+              )}
+            </div>
           </div>
 
           {/* Quota */}
@@ -168,12 +224,24 @@ export default function AdminUserDetail() {
         {/* Custom override */}
         <div className="card mb-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-h2">Negotiated Override</h3>
+            <div className="flex items-center gap-3">
+              <h3 className="text-h2">Negotiated Plan</h3>
+              {statusBadge && <Badge variant={statusBadge.variant}>{statusBadge.label}</Badge>}
+            </div>
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={override.enabled} onChange={(e) => setOverride((o) => ({ ...o, enabled: e.target.checked }))} />
               Enabled
             </label>
           </div>
+
+          {overrideStatus && (
+            <p className="text-xs text-on-surface-variant mb-4">
+              {overrideStatus.state === "scheduled" && <>Starts <span className="text-on-surface font-medium">{formatDate(overrideStatus.effectiveFrom)}</span> — until then, this user's current plan/subscription keeps running as normal.</>}
+              {overrideStatus.state === "active" && <>Active since <span className="text-on-surface font-medium">{formatDate(overrideStatus.effectiveFrom)}</span>, renews/ends <span className="text-on-surface font-medium">{formatDate(overrideStatus.periodEnd)}</span>.</>}
+              {overrideStatus.state === "expired" && <>Ended <span className="text-on-surface font-medium">{formatDate(overrideStatus.periodEnd)}</span> — the user sees a "Renew" prompt in Billing until they pay again or you disable this.</>}
+            </p>
+          )}
+
           {override.enabled && (
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
@@ -185,11 +253,23 @@ export default function AdminUserDetail() {
                 <div><label className="label-sm text-[11px]">Automations</label><input type="number" className="input-field text-sm" value={override.maxAutomations} onChange={(e) => setOverride((o) => ({ ...o, maxAutomations: e.target.value }))} /></div>
                 <div><label className="label-sm text-[11px]">DMs/month</label><input type="number" className="input-field text-sm" value={override.maxDmsPerMonth} onChange={(e) => setOverride((o) => ({ ...o, maxDmsPerMonth: e.target.value }))} /></div>
               </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="label-sm text-[11px]">Starts on</label>
+                  <input type="date" className="input-field text-sm" value={override.effectiveFrom} onChange={(e) => setOverride((o) => ({ ...o, effectiveFrom: e.target.value }))} />
+                  <p className="text-[10px] text-on-surface-variant mt-1">Leave as today for "apply immediately." Any active plan/subscription this user has stays running until this date, then gets overwritten automatically.</p>
+                </div>
+                <div>
+                  <label className="label-sm text-[11px]">Cycle length (days)</label>
+                  <input type="number" className="input-field text-sm" value={override.durationDays} onChange={(e) => setOverride((o) => ({ ...o, durationDays: e.target.value }))} />
+                  <p className="text-[10px] text-on-surface-variant mt-1">When this many days pass, the plan ends and the user is prompted to renew at the same price.</p>
+                </div>
+              </div>
               <div><label className="label-sm text-[11px]">Internal note (why this deal?)</label><input className="input-field text-sm" value={override.note} onChange={(e) => setOverride((o) => ({ ...o, note: e.target.value }))} /></div>
             </div>
           )}
           <button onClick={handleOverrideSave} disabled={saving} className="btn-primary mt-4 text-sm px-4 py-2 flex items-center gap-2">
-            <Save size={15} /> Save Override
+            <Save size={15} /> Save Negotiated Plan
           </button>
         </div>
 
@@ -208,6 +288,41 @@ export default function AdminUserDetail() {
             <button onClick={handleSuspendToggle} className={`text-sm font-semibold px-4 py-2 rounded-lg ${data.user.isSuspended ? "bg-primary text-on-primary" : "bg-error/10 text-error border border-error/30"}`}>
               {data.user.isSuspended ? "Reactivate" : "Suspend"}
             </button>
+          </div>
+        </div>
+
+        {/* Subscription history — every plan/renewal this user has paid for, self-serve or negotiated-plan renewal receipts alike */}
+        <div className="card mb-6 p-0 overflow-hidden">
+          <h3 className="text-h2 p-padding-card pb-4">Subscription History ({data.subscriptions.length})</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="bg-surface-container-high text-[11px] text-on-surface-variant uppercase tracking-wider border-y border-outline-variant">
+                  <th className="px-4 py-2.5">Plan</th>
+                  <th className="px-4 py-2.5">Amount</th>
+                  <th className="px-4 py-2.5">Started</th>
+                  <th className="px-4 py-2.5">Ends</th>
+                  <th className="px-4 py-2.5">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-outline-variant">
+                {data.subscriptions.length === 0 ? (
+                  <tr><td colSpan={5} className="px-4 py-6 text-center text-sm text-on-surface-variant">No subscriptions yet.</td></tr>
+                ) : (
+                  data.subscriptions.map((s) => (
+                    <tr key={s._id}>
+                      <td className="px-4 py-2.5 text-sm capitalize">{s.plan === "custom_override" ? "Custom plan renewal" : s.plan}</td>
+                      <td className="px-4 py-2.5 text-sm font-mono">₹{(s.amount / 100).toLocaleString("en-IN")}</td>
+                      <td className="px-4 py-2.5 text-sm text-on-surface-variant">{formatDate(s.periodStart)}</td>
+                      <td className="px-4 py-2.5 text-sm text-on-surface-variant">{formatDate(s.periodEnd)}</td>
+                      <td className="px-4 py-2.5">
+                        <Badge variant={s.status === "active" ? "success" : s.status === "created" ? "neutral" : "error"}>{s.status}</Badge>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
 
