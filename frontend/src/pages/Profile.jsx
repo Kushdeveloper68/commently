@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { Save, Trash2, Sparkles } from "lucide-react";
+import { Save, Trash2, Sparkles, LogOut } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
 import AppLayout from "../components/AppLayout.jsx";
 import api from "../api/axios.js";
@@ -151,6 +151,7 @@ function SecurityTab({ logout, navigate }) {
   const [confirmText, setConfirmText] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const handleDelete = async () => {
     if (confirmText !== "DELETE") return;
@@ -166,38 +167,68 @@ function SecurityTab({ logout, navigate }) {
     }
   };
 
-  return (
-    <div className="bg-surface-container border border-error/20 rounded-xl p-padding-card">
-      <h3 className="text-h2 text-error mb-2 flex items-center gap-2">
-        <Trash2 size={19} /> Delete Account
-      </h3>
-      <p className="text-body-md text-on-surface-variant mb-6">
-        This permanently deletes your account, disconnects all Instagram accounts, and removes every
-        automation, interaction log, and subscription record. This can't be undone.
-      </p>
+  const handleLogout = async () => {
+    setLoggingOut(true);
+    try {
+      await logout();
+      toast.success("Logged out");
+      navigate("/login");
+    } catch {
+      toast.error("Couldn't log out. Please try again.");
+      setLoggingOut(false);
+    }
+  };
 
-      {!showConfirm ? (
-        <button onClick={() => setShowConfirm(true)} className="bg-error/10 border border-error/30 text-error px-4 py-2 rounded-lg text-label-sm hover:bg-error/20 transition-colors">
-          Delete Account
+  return (
+    <div className="space-y-6">
+      <div className="bg-surface-container border border-outline-variant rounded-xl p-padding-card">
+        <h3 className="text-h2 mb-2 flex items-center gap-2">
+          <LogOut size={19} /> Session
+        </h3>
+        <p className="text-body-md text-on-surface-variant mb-6">
+          Sign out of DMLoop on this device. You'll need to log back in with Google to access your account again.
+        </p>
+        <button
+          onClick={handleLogout}
+          disabled={loggingOut}
+          className="bg-surface-container-high border border-outline-variant px-4 py-2 rounded-lg text-label-sm hover:bg-surface-container-highest transition-colors disabled:opacity-50 flex items-center gap-2"
+        >
+          <LogOut size={16} /> {loggingOut ? "Logging out..." : "Log Out"}
         </button>
-      ) : (
-        <div className="space-y-3 max-w-sm">
-          <label className="label-sm">
-            Type <span className="font-mono text-on-surface">DELETE</span> to confirm
-          </label>
-          <input className="input-field w-full" value={confirmText} onChange={(e) => setConfirmText(e.target.value)} placeholder="DELETE" />
-          <div className="flex gap-2">
-            <button
-              onClick={handleDelete}
-              disabled={confirmText !== "DELETE" || deleting}
-              className="bg-error text-white text-sm font-semibold px-4 py-2 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
-            >
-              {deleting ? "Deleting..." : "Permanently delete"}
-            </button>
-            <button onClick={() => { setShowConfirm(false); setConfirmText(""); }} className="btn-secondary text-sm">Cancel</button>
+      </div>
+
+      <div className="bg-surface-container border border-error/20 rounded-xl p-padding-card">
+        <h3 className="text-h2 text-error mb-2 flex items-center gap-2">
+          <Trash2 size={19} /> Delete Account
+        </h3>
+        <p className="text-body-md text-on-surface-variant mb-6">
+          This permanently deletes your account, disconnects all Instagram accounts, and removes every
+          automation, interaction log, and subscription record. This can't be undone.
+        </p>
+
+        {!showConfirm ? (
+          <button onClick={() => setShowConfirm(true)} className="bg-error/10 border border-error/30 text-error px-4 py-2 rounded-lg text-label-sm hover:bg-error/20 transition-colors">
+            Delete Account
+          </button>
+        ) : (
+          <div className="space-y-3 max-w-sm">
+            <label className="label-sm">
+              Type <span className="font-mono text-on-surface">DELETE</span> to confirm
+            </label>
+            <input className="input-field w-full" value={confirmText} onChange={(e) => setConfirmText(e.target.value)} placeholder="DELETE" />
+            <div className="flex gap-2">
+              <button
+                onClick={handleDelete}
+                disabled={confirmText !== "DELETE" || deleting}
+                className="bg-error text-white text-sm font-semibold px-4 py-2 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
+              >
+                {deleting ? "Deleting..." : "Permanently delete"}
+              </button>
+              <button onClick={() => { setShowConfirm(false); setConfirmText(""); }} className="btn-secondary text-sm">Cancel</button>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

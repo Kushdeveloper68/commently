@@ -16,6 +16,13 @@ const COOKIE_OPTS = {
   maxAge: 7 * 24 * 60 * 60 * 1000,
 };
 
+// clearCookie only needs the attributes that affect cookie *identity*
+// (path/domain/secure/sameSite/httpOnly) to match the cookie it's clearing —
+// maxAge is meaningless there and passing it is deprecated as of Express
+// 4.x (it'll be ignored outright in v5). Express sets its own
+// immediate-expiry maxAge internally when clearing.
+const { maxAge: _unusedMaxAge, ...CLEAR_COOKIE_OPTS } = COOKIE_OPTS;
+
 function setAuthCookies(res, userId) {
   const accessToken = signAccessToken(userId);
   const refreshToken = signRefreshToken(userId);
@@ -98,8 +105,13 @@ export async function refreshToken(req, res) {
 
 // POST /api/auth/logout
 export async function logout(req, res) {
-  res.clearCookie("accessToken");
-  res.clearCookie("refreshToken");
+  // clearCookie must be called with the same `secure`/`sameSite` options the
+  // cookie was originally set with — some browsers won't reliably clear a
+  // cookie whose attributes don't match on the clearing call. maxAge is
+  // intentionally excluded (see CLEAR_COOKIE_OPTS above) since Express
+  // deprecated/ignores it here.
+  res.clearCookie("accessToken", CLEAR_COOKIE_OPTS);
+  res.clearCookie("refreshToken", CLEAR_COOKIE_OPTS);
   res.json({ success: true });
 }
 
@@ -139,8 +151,8 @@ export async function deleteAccount(req, res) {
   try {
     await deleteUserCascade(req.user._id);
 
-    res.clearCookie("accessToken");
-    res.clearCookie("refreshToken");
+    res.clearCookie("accessToken", CLEAR_COOKIE_OPTS);
+    res.clearCookie("refreshToken", CLEAR_COOKIE_OPTS);
     res.json({ success: true });
   } catch (err) {
     console.error("Account deletion failed:", err.message);

@@ -1,12 +1,36 @@
-import { Link } from "react-router-dom";
-import { Search, Bell, HelpCircle, Menu } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { Search, Bell, HelpCircle, Menu, LogOut, Settings, ChevronDown } from "lucide-react";
+import toast from "react-hot-toast";
 import { useAuth } from "../context/AuthContext.jsx";
 
 // hasAlerts: optional, pages can pass true (e.g. Instagram account needs
 // reconnecting) to light up the notification dot — no fake indicator shown
 // by default.
 export default function TopBar({ onMenuClick, hasAlerts = false }) {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false);
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleLogout = async () => {
+    setMenuOpen(false);
+    try {
+      await logout();
+      toast.success("Logged out");
+      navigate("/login");
+    } catch {
+      toast.error("Couldn't log out. Please try again.");
+    }
+  };
 
   return (
     <header className="fixed top-0 left-0 right-0 md:left-64 h-16 bg-surface-container-low border-b border-outline-variant flex items-center justify-between px-4 md:px-gutter z-30">
@@ -47,15 +71,49 @@ export default function TopBar({ onMenuClick, hasAlerts = false }) {
               Upgrade
             </Link>
           )}
-          <Link to="/profile" className="w-8 h-8 rounded-full overflow-hidden border border-outline-variant shrink-0">
-            {user?.avatarUrl ? (
-              <img src={user.avatarUrl} alt="" className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold">
-                {user?.name?.[0]?.toUpperCase()}
+
+          <div className="relative" ref={menuRef}>
+            <button
+              onClick={() => setMenuOpen((v) => !v)}
+              className="flex items-center gap-1.5 shrink-0"
+              aria-label="Account menu"
+              aria-haspopup="true"
+              aria-expanded={menuOpen}
+            >
+              <div className="w-8 h-8 rounded-full overflow-hidden border border-outline-variant shrink-0">
+                {user?.avatarUrl ? (
+                  <img src={user.avatarUrl} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold">
+                    {user?.name?.[0]?.toUpperCase()}
+                  </div>
+                )}
+              </div>
+              <ChevronDown size={15} className={`text-on-surface-variant transition-transform hidden sm:block ${menuOpen ? "rotate-180" : ""}`} />
+            </button>
+
+            {menuOpen && (
+              <div className="absolute right-0 top-full mt-2 w-56 bg-surface-container border border-outline-variant rounded-xl shadow-lg py-1.5 z-50">
+                <div className="px-3.5 py-2.5 border-b border-outline-variant">
+                  <p className="text-label-sm text-on-surface font-semibold truncate">{user?.name}</p>
+                  <p className="text-[12px] text-on-surface-variant truncate">{user?.email}</p>
+                </div>
+                <Link
+                  to="/profile"
+                  onClick={() => setMenuOpen(false)}
+                  className="flex items-center gap-2.5 px-3.5 py-2.5 text-label-sm text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors"
+                >
+                  <Settings size={16} /> Settings
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-label-sm text-error hover:bg-error/10 transition-colors text-left"
+                >
+                  <LogOut size={16} /> Log out
+                </button>
               </div>
             )}
-          </Link>
+          </div>
         </div>
       </div>
     </header>

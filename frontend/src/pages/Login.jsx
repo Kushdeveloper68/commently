@@ -106,7 +106,7 @@ export default function Login() {
                   <p className="text-on-surface-variant opacity-70 text-body-md">Enter the command center to manage your growth.</p>
                 </header>
 
-                <div ref={buttonRef} className="flex justify-center [&>div]:!w-full" />
+                <div ref={buttonRef} className="ml-6 flex justify-center [&>div]:!w-full" />
 
                 <div className="w-full flex items-center gap-stack-md my-stack-lg">
                   <div className="h-px bg-white/10 flex-grow" />
