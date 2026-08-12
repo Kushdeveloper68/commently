@@ -51,7 +51,7 @@ app.use(helmet());
 app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "https://diminish-stipend-harmonize.ngrok-free.dev",
+    origin: process.env.FRONTEND_URL || "https://diminish-stipend-harmonize.ngrok-free.dev" || "https://www.dmloop.app",
     credentials: true,
   })
 );
