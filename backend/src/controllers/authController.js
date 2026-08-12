@@ -13,7 +13,14 @@ const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 const COOKIE_OPTS = {
   httpOnly: true,
   secure: process.env.NODE_ENV === "production",
-  sameSite: "lax",
+  // "lax" only sends cookies on same-site requests — fine for local dev
+  // (frontend/backend on the same origin via Vite's proxy), but Render +
+  // Vercel are two entirely different domains, so this is a genuine
+  // cross-site request from the browser's point of view. "none" is required
+  // for the browser to attach the cookie at all — and "none" is only valid
+  // when paired with `secure: true` (browsers reject it otherwise), which
+  // is already the case in production since Render/Vercel both serve HTTPS.
+  sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
   maxAge: 7 * 24 * 60 * 60 * 1000,
 };
 

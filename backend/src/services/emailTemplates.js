@@ -1,11 +1,18 @@
+// Falls back to the dmloop.app production domain if FRONTEND_URL isn't set
+// (e.g. a script run without full env config) — but in normal operation
+// this always reflects wherever FRONTEND_URL actually points (local dev,
+// staging, or production), so links in emails never go stale or point at
+// the wrong environment.
+const APP_URL = (process.env.FRONTEND_URL || "https://dmloop.app").replace(/\/$/, "");
+
 function wrapper(bodyHtml) {
   return `
   <div style="font-family: -apple-system, Segoe UI, Roboto, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 24px; color: #101828;">
     <div style="font-size: 20px; font-weight: 700; color: #2954ff; margin-bottom: 24px;">DMLoop</div>
     ${bodyHtml}
     <p style="font-size: 13px; color: #8892a6; margin-top: 32px; border-top: 1px solid #e3e7f0; padding-top: 16px;">
-      DMLoop · <a href="https://dmloop.app/dashboard" style="color: #2954ff;">Open dashboard</a> ·
-      <a href="https://dmloop.app/billing" style="color: #2954ff;">Manage billing</a>
+      DMLoop · <a href="${APP_URL}/dashboard" style="color: #2954ff;">Open dashboard</a> ·
+      <a href="${APP_URL}/billing" style="color: #2954ff;">Manage billing</a>
     </p>
   </div>`;
 }
@@ -21,7 +28,7 @@ export function quota80Email(user, limits) {
       <strong style="text-transform: capitalize;">${user.plan}</strong> plan.</p>
       <p>Once you hit the limit, automations pause automatically (nothing breaks, nothing sends
       double) until next month — or you can upgrade to keep them running without interruption.</p>
-      <p><a href="https://dmloop.app/billing" style="display:inline-block; background:#2954ff; color:#fff; padding:10px 20px; border-radius:8px; text-decoration:none; font-weight:600; margin-top:8px;">Upgrade plan</a></p>
+      <p><a href="${APP_URL}/billing" style="display:inline-block; background:#2954ff; color:#fff; padding:10px 20px; border-radius:8px; text-decoration:none; font-weight:600; margin-top:8px;">Upgrade plan</a></p>
     `),
   };
 }
@@ -36,7 +43,7 @@ export function quota100Email(user, limits) {
       limit on the <strong style="text-transform: capitalize;">${user.plan}</strong> plan.
       Your automations have paused — comments and DMs will stop triggering replies until your
       usage resets or you upgrade.</p>
-      <p><a href="https://dmloop.app/billing" style="display:inline-block; background:#2954ff; color:#fff; padding:10px 20px; border-radius:8px; text-decoration:none; font-weight:600; margin-top:8px;">Upgrade to keep automations running</a></p>
+      <p><a href="${APP_URL}/billing" style="display:inline-block; background:#2954ff; color:#fff; padding:10px 20px; border-radius:8px; text-decoration:none; font-weight:600; margin-top:8px;">Upgrade to keep automations running</a></p>
     `),
   };
 }
@@ -87,7 +94,7 @@ export function customPlanExpiredEmail(user, override) {
       moved to whatever plan/subscription you had underneath it (or Free, if none).</p>
       <p>Want to keep your same custom terms? You can renew it in one click from Billing — the price
       and limits stay exactly as negotiated.</p>
-      <p><a href="https://dmloop.app/billing" style="display:inline-block; background:#2954ff; color:#fff; padding:10px 20px; border-radius:8px; text-decoration:none; font-weight:600; margin-top:8px;">Renew my plan</a></p>
+      <p><a href="${APP_URL}/billing" style="display:inline-block; background:#2954ff; color:#fff; padding:10px 20px; border-radius:8px; text-decoration:none; font-weight:600; margin-top:8px;">Renew my plan</a></p>
     `),
   };
 }

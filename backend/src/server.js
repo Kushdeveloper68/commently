@@ -29,6 +29,14 @@ import { handleRazorpayWebhook } from "./controllers/paymentController.js";
 
 const app = express();
 
+// Render (and most PaaS hosts) sit the app behind a reverse proxy, so the
+// request's real client IP arrives in X-Forwarded-For rather than as the
+// TCP connection's IP. Without this, express-rate-limit either throws on
+// startup (it refuses to trust X-Forwarded-For blindly) or — worse — keys
+// every single user's rate limit off Render's proxy IP, meaning ALL users
+// would silently share one 30-requests/15-min bucket on /api/auth.
+app.set("trust proxy", 1);
+
 // Error monitoring — no-ops harmlessly if SENTRY_DSN isn't set, so this is
 // safe to leave in even before you've created a Sentry project.
 if (process.env.SENTRY_DSN) {
