@@ -13,6 +13,7 @@ const links = [
 
 export default function AppSidebar({ open, onClose }) {
   const { user } = useAuth();
+  const logoSrc = "/dmloop-logo-design-rectrangle-blue-landingpage.png";
   return (
     <>
       {open && <div className="md:hidden fixed inset-0 bg-black/60 z-40" onClick={onClose} />}
@@ -22,13 +23,12 @@ export default function AppSidebar({ open, onClose }) {
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="mb-10 px-2 flex items-center gap-3">
-          <div className="w-8 h-8 bg-primary rounded flex items-center justify-center shrink-0">
-            <MessageSquare size={17} className="text-on-primary" />
-          </div>
-          <div>
-            <h2 className="text-h2 font-bold text-primary leading-tight">DMLoop</h2>
-            <p className="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Command Center</p>
+        <div className="mb-10 flex items-center">
+          <img src={logoSrc} alt="DMLoop" className="block h-14 w-auto max-w-[180px] object-contain shrink-0" />
+          <div className="min-w-0 flex items-center">
+            <div className="font-sans text-[16px] font-extrabold uppercase tracking-[0.22em] text-white leading-none whitespace-nowrap">
+              DMLOOP
+            </div>
           </div>
         </div>
 

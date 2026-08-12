@@ -2,7 +2,6 @@ import { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { LayoutDashboard, Zap, Instagram, CreditCard, User, LogOut, BarChart3, Menu, X } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
-import ThemeToggle from "./ThemeToggle.jsx";
 
 const links = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -20,6 +19,7 @@ export default function Sidebar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const logoSrc = "/dmloop-logo-design-rectrangle-blue-landingpage.png";
 
   const handleLogout = async () => {
     await logout();
@@ -28,10 +28,15 @@ export default function Sidebar() {
 
   const NavContent = (
     <>
-      <div className="px-6 py-6 border-b border-border flex items-center justify-between">
-        <div>
-          <div className="font-display text-2xl font-bold text-gold-bright tracking-tight">DMLoop</div>
-          <div className="text-xs text-muted mt-1 capitalize">{user?.plan || "free"} plan</div>
+      <div className="px-6 py-5 border-b border-border flex items-center justify-between gap-4">
+        <div className="min-w-0 flex-1 flex flex-col items-center">
+          <div className="flex items-center justify-center gap-3">
+            <img src={logoSrc} alt="DMLoop" className="block h-14 w-auto max-w-[180px] object-contain shrink-0" />
+            <div className="font-sans text-[16px] font-extrabold uppercase tracking-[0.22em] text-white leading-none whitespace-nowrap">
+              DMLOOP
+            </div>
+          </div>
+          <div className="text-xs text-muted mt-2 capitalize">{user?.plan || "free"} plan</div>
         </div>
         <button onClick={() => setOpen(false)} className="md:hidden text-muted hover:text-ink">
           <X size={20} />
@@ -57,7 +62,7 @@ export default function Sidebar() {
       </nav>
 
       <div className="px-3 py-4 border-t border-border">
-        <div className="flex items-center gap-3 px-3 py-2 mb-2">
+        <div className="flex items-center gap-3 px-3 py-2 mb-2 min-w-0">
           {user?.avatarUrl ? (
             <img src={user.avatarUrl} alt="" className="w-8 h-8 rounded-full" />
           ) : (
@@ -69,7 +74,6 @@ export default function Sidebar() {
             <div className="text-sm font-medium truncate">{user?.name}</div>
             <div className="text-xs text-muted truncate">{user?.email}</div>
           </div>
-          <ThemeToggle />
         </div>
         <button
           onClick={handleLogout}
@@ -88,8 +92,13 @@ export default function Sidebar() {
         <button onClick={() => setOpen(true)} className="text-muted hover:text-ink" aria-label="Open menu">
           <Menu size={22} />
         </button>
-        <div className="font-display text-lg font-bold text-gold-bright">DMLoop</div>
-        <ThemeToggle />
+        <div className="flex items-center  min-w-0 flex-1">
+          <img src={logoSrc} alt="DMLoop" className="block h-8 w-auto max-w-[150px] object-contain shrink-0" />
+          <span className="font-sans text-[11px] font-extrabold uppercase tracking-[0.18em] text-white leading-none whitespace-nowrap">
+            DMLOOP
+          </span>
+        </div>
+        <div className="w-6" />
       </header>
 
       {/* Mobile drawer overlay */}

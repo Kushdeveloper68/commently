@@ -35,7 +35,8 @@ function Header() {
     <header className="flex justify-between items-center px-gutter w-full sticky top-0 z-50 bg-background/80 backdrop-blur-md h-16 border-b border-outline-variant">
       <div className="max-w-[1200px] w-full mx-auto flex items-center justify-between">
         <div className="flex items-center gap-8">
-          <span className="text-h2 font-black tracking-tighter">DMLoop</span>
+          {/* image name dmloop-logo-design-rectrangle-blue-landingpage.png from public , with perfect size and margin*/}
+          <img src="/dmloop-logo-design-rectrangle-blue-landingpage.png" alt="DMLoop Logo" className="h-16 w-auto" />
           <nav className="hidden md:flex items-center gap-6">
             <a className="text-label-sm text-on-surface-variant hover:text-primary transition-colors" href="#features">Features</a>
             <a className="text-label-sm text-on-surface-variant hover:text-primary transition-colors" href="#pricing">Pricing</a>
