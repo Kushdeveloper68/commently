@@ -206,8 +206,8 @@ function HowItWorks() {
 function Pricing() {
   const plans = [
     { name: "Free", price: "₹0", period: "forever", features: ["1 Instagram account", "1 automation", "50 DMs / month", "Comment automation only"] },
-    { name: "Starter", price: "₹399", period: "/month", badge: "Most popular", highlight: true, features: ["1 Instagram account", "5 automations", "2,000 DMs / month", "Public replies + follow-gating", "Story-reply & DM automation"] },
-    { name: "Pro", price: "₹899", period: "/month", badge: "Best value per DM", features: ["5 Instagram accounts", "50 automations", "20,000 DMs / month", "Everything in Starter", "Analytics & leads dashboard"] },
+    { name: "Starter", price: "₹99", period: "/month", badge: "Most popular", highlight: true, features: ["1 Instagram account", "5 automations", "10,000 DMs / month", "Public replies + follow-gating", "Story-reply & DM automation"] },
+    { name: "Pro", price: "₹199", period: "/month", badge: "Best value per DM", features: ["5 Instagram accounts", "20 automations", "20,000 DMs / month", "Everything in Starter", "Analytics & leads dashboard"] },
   ];
   return (
     <section id="pricing" className="pb-section-gap scroll-mt-20">
@@ -247,7 +247,7 @@ function Pricing() {
                 plan.highlight ? "bg-primary text-white hover:brightness-110" : "border border-outline-variant text-white hover:border-primary hover:text-primary"
               }`}
             >
-              {plan.name === "Free" ? "Start free" : "Start free trial"}
+              {plan.name + " Plan"}
             </Link>
           </div>
         ))}

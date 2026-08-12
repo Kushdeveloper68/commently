@@ -1,6 +1,8 @@
 import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
-import { ArrowLeft, MessageSquare } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
+
+const logoSrc = "/dmloop-logo-design-rectrangle-blue-landingpage.png";
 
 export default function LegalLayout({ title, description, updatedAt, children }) {
   return (
@@ -16,11 +18,11 @@ export default function LegalLayout({ title, description, updatedAt, children })
           <Link to="/" className="flex items-center gap-2 text-sm text-on-surface-variant hover:text-primary transition-colors">
             <ArrowLeft size={16} /> Back to DMLoop
           </Link>
-          <Link to="/" className="flex items-center gap-2">
-            <span className="w-6 h-6 rounded bg-primary flex items-center justify-center">
-              <MessageSquare size={13} className="text-on-primary" />
+          <Link to="/" className="flex items-center gap-3">
+            <img src={logoSrc} alt="DMLoop" className="block h-14 w-auto object-contain shrink-0" />
+            <span className="font-sans text-sm font-extrabold uppercase tracking-[0.18em] text-on-surface leading-none whitespace-nowrap">
+              DMLOOP
             </span>
-            <span className="font-bold text-sm">DMLoop</span>
           </Link>
         </div>
       </header>
