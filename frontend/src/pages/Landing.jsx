@@ -309,9 +309,10 @@ function Footer() {
           <p className="text-label-sm text-on-surface-variant leading-relaxed">
             Instagram automation for high-growth creators and agencies.
           </p>
+          {/* domain name is dmloop.app is to be add herelink  */}
           <div className="flex gap-4">
             {[Globe, AtSign, Share2].map((Icon, i) => (
-              <a key={i} className="w-10 h-10 rounded bg-surface border border-outline-variant flex items-center justify-center hover:text-primary transition-colors" href="#">
+              <a key={i} className="w-10 h-10 rounded bg-surface border border-outline-variant flex items-center justify-center hover:text-primary transition-colors" href="dmloop.app" target="_blank" rel="noopener noreferrer">
                 <Icon size={18} />
               </a>
             ))}
@@ -335,7 +336,7 @@ function Footer() {
         </div>
         <div>
           <h5 className="text-white font-bold mb-6">Contact</h5>
-          <p className="text-label-sm text-on-surface-variant">support@dmloop.app</p>
+          <p className="text-label-sm text-on-surface-variant"><a href="mailto:infokv26@gmail.com" className="hover:text-primary transition-colors">infokv26@gmail.com</a></p>
         </div>
       </div>
       <div className="max-w-[1200px] mx-auto px-gutter mt-16 pt-8 border-t border-outline-variant flex flex-col md:flex-row justify-between items-center gap-4">
