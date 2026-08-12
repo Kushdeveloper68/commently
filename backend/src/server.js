@@ -49,9 +49,22 @@ if (process.env.SENTRY_DSN) {
 // --- Security & infra middleware ---
 app.use(helmet());
 app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
+
+const allowedOrigins = [
+  "https://www.dmloop.app",
+  "https://dmloop.app",
+  "http://localhost:5173",
+];
+
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "https://diminish-stipend-harmonize.ngrok-free.dev" || "https://www.dmloop.app",
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error(`CORS blocked origin: ${origin}`));
+      }
+    },
     credentials: true,
   })
 );
