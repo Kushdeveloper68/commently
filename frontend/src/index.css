@@ -57,3 +57,716 @@
     @apply px-2 py-1 text-[10px] font-bold uppercase rounded;
   }
 }
+
+
+/* =========================================================
+   DMLOOP DESIGN SYSTEM
+========================================================= */
+
+.dmloop-page {
+  --dm-blue: #2954ff;
+  --dm-blue-bright: #3a69ff;
+  --dm-bg: #070a12;
+  --dm-surface: #0d111c;
+  --dm-surface-2: #111622;
+  --dm-border: rgba(255, 255, 255, 0.08);
+  --dm-muted: #929aaf;
+  --dm-success: #22c55e;
+
+  font-family: "DM Sans", sans-serif;
+}
+
+.dmloop-page h1,
+.dmloop-page h2,
+.dmloop-page h3,
+.dmloop-page h4,
+.dmloop-page h5 {
+  font-family: "Manrope", sans-serif;
+}
+
+.dmloop-page .font-mono {
+  font-family: "IBM Plex Mono", monospace;
+}
+
+/* =========================================================
+   NAVIGATION
+========================================================= */
+
+.dm-nav-link {
+  position: relative;
+  transition:
+    color 220ms ease,
+    transform 220ms ease;
+}
+
+.dm-nav-link::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -8px;
+  width: 0;
+  height: 1px;
+  background: var(--dm-blue);
+  transform: translateX(-50%);
+  transition: width 250ms cubic-bezier(.22, 1, .36, 1);
+}
+
+.dm-nav-link:hover {
+  color: white;
+}
+
+.dm-nav-link:hover::after {
+  width: 18px;
+}
+
+.dm-login {
+  transition:
+    color 220ms ease,
+    transform 220ms ease;
+}
+
+.dm-login:hover {
+  color: white;
+  transform: translateY(-1px);
+}
+
+/* =========================================================
+   BUTTONS
+========================================================= */
+
+.dm-primary-button {
+  background: var(--dm-blue);
+  box-shadow: 0 8px 30px rgba(41, 84, 255, 0.18);
+
+  transition:
+    transform 300ms cubic-bezier(.22, 1, .36, 1),
+    background-color 220ms ease,
+    box-shadow 300ms ease;
+}
+
+.dm-primary-button:hover {
+  background: var(--dm-blue-bright);
+  transform: translateY(-2px);
+  box-shadow: 0 14px 40px rgba(41, 84, 255, 0.28);
+}
+
+.dm-primary-button:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.dm-secondary-button {
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: rgba(255, 255, 255, 0.025);
+
+  transition:
+    transform 300ms cubic-bezier(.22, 1, .36, 1),
+    border-color 220ms ease,
+    background-color 220ms ease;
+}
+
+.dm-secondary-button:hover {
+  transform: translateY(-2px);
+  border-color: rgba(41, 84, 255, 0.35);
+  background: rgba(41, 84, 255, 0.06);
+}
+
+/* =========================================================
+   TYPOGRAPHY
+========================================================= */
+
+.dm-gradient-text {
+  background: linear-gradient(
+    110deg,
+    #ffffff 0%,
+    #9eb3ff 45%,
+    #5e80ff 100%
+  );
+
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.dm-eyebrow {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: #607dff;
+}
+
+.dm-section-title {
+  max-width: 700px;
+  font-family: "Manrope", sans-serif;
+  font-size: clamp(32px, 5vw, 48px);
+  line-height: 1.05;
+  font-weight: 800;
+  letter-spacing: -0.045em;
+  color: white;
+}
+
+.dm-section-title span {
+  color: #6d788d;
+}
+
+/* =========================================================
+   HERO
+========================================================= */
+
+.dm-reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  animation: dmReveal 850ms cubic-bezier(.22, 1, .36, 1) forwards;
+}
+
+.dm-delay-1 {
+  animation-delay: 100ms;
+}
+
+.dm-delay-2 {
+  animation-delay: 180ms;
+}
+
+.dm-delay-3 {
+  animation-delay: 260ms;
+}
+
+.dm-delay-4 {
+  animation-delay: 340ms;
+}
+
+.dm-delay-5 {
+  animation-delay: 420ms;
+}
+
+@keyframes dmReveal {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dm-float {
+  animation: dmFloat 7s ease-in-out infinite;
+  will-change: transform;
+}
+
+@keyframes dmFloat {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+
+  50% {
+    transform: translate3d(0, -8px, 0);
+  }
+}
+
+.dm-dashboard {
+  transform: perspective(1200px) rotateY(-2deg) rotateX(1deg);
+  transition:
+    transform 700ms cubic-bezier(.22, 1, .36, 1),
+    box-shadow 500ms ease;
+}
+
+.dm-dashboard:hover {
+  transform: perspective(1200px) rotateY(0deg) rotateX(0deg) translateY(-4px);
+  box-shadow:
+    0 50px 120px rgba(0, 0, 0, 0.5),
+    0 0 80px rgba(41, 84, 255, 0.08);
+}
+
+.dm-floating-badge {
+  animation: dmBadgeFloat 4s ease-in-out infinite;
+}
+
+@keyframes dmBadgeFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-7px);
+  }
+}
+
+/* =========================================================
+   AUTOMATION NODES
+========================================================= */
+
+.dm-node {
+  transition:
+    transform 300ms cubic-bezier(.22, 1, .36, 1),
+    border-color 300ms ease,
+    background-color 300ms ease;
+}
+
+.dm-node:hover {
+  transform: translateX(4px);
+  border-color: rgba(41, 84, 255, 0.35);
+  background: rgba(41, 84, 255, 0.035);
+}
+
+.dm-flow-line::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -4px;
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: #6f91ff;
+  box-shadow: 0 0 12px rgba(41, 84, 255, 0.9);
+  transform: translateX(-50%);
+  animation: dmFlow 1.8s linear infinite;
+}
+
+@keyframes dmFlow {
+  from {
+    top: -3px;
+    opacity: 0;
+  }
+
+  20% {
+    opacity: 1;
+  }
+
+  80% {
+    opacity: 1;
+  }
+
+  to {
+    top: calc(100% - 1px);
+    opacity: 0;
+  }
+}
+
+/* =========================================================
+   MARQUEE
+========================================================= */
+
+.dm-marquee {
+  overflow: hidden;
+  width: 100%;
+}
+
+.dm-marquee-track {
+  display: flex;
+  width: max-content;
+  animation: dmMarquee 28s linear infinite;
+  will-change: transform;
+}
+
+.dm-marquee:hover .dm-marquee-track {
+  animation-play-state: paused;
+}
+
+@keyframes dmMarquee {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+/* =========================================================
+   TRUST
+========================================================= */
+
+.dm-trust-item {
+  transition:
+    transform 300ms cubic-bezier(.22, 1, .36, 1),
+    border-color 250ms ease,
+    background-color 250ms ease;
+}
+
+.dm-trust-item:hover {
+  transform: translateY(-3px);
+  border-color: rgba(41, 84, 255, 0.22);
+  background: rgba(41, 84, 255, 0.035);
+}
+
+/* =========================================================
+   FEATURE CARDS
+========================================================= */
+
+.dm-feature-card,
+.dm-step-card,
+.dm-reason-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: #0d111c;
+  border-radius: 20px;
+}
+
+.dm-feature-card {
+  padding: 28px;
+  min-height: 300px;
+
+  transition:
+    transform 450ms cubic-bezier(.22, 1, .36, 1),
+    border-color 350ms ease,
+    box-shadow 450ms ease,
+    background-color 350ms ease;
+}
+
+.dm-feature-card::before,
+.dm-reason-card::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      circle at 50% 0%,
+      rgba(41, 84, 255, 0.14),
+      transparent 42%
+    );
+  opacity: 0;
+  transition: opacity 400ms ease;
+}
+
+.dm-feature-card:hover {
+  transform: translate3d(0, -8px, 0);
+  border-color: rgba(41, 84, 255, 0.28);
+  background: #0f1420;
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.25);
+}
+
+.dm-feature-card:hover::before,
+.dm-reason-card:hover::before {
+  opacity: 1;
+}
+
+.dm-icon-box {
+  display: flex;
+  width: 44px;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  border: 1px solid rgba(41, 84, 255, 0.16);
+  background: rgba(41, 84, 255, 0.08);
+  color: #6f91ff;
+
+  transition:
+    transform 350ms cubic-bezier(.22, 1, .36, 1),
+    background-color 250ms ease;
+}
+
+.dm-feature-card:hover .dm-icon-box {
+  transform: rotate(-4deg) scale(1.08);
+  background: rgba(41, 84, 255, 0.14);
+}
+
+/* =========================================================
+   SHOWCASE
+========================================================= */
+
+.dm-showcase {
+  background:
+    radial-gradient(
+      circle at 80% 20%,
+      rgba(41, 84, 255, 0.08),
+      transparent 35%
+    ),
+    #0d111c;
+}
+
+.dm-showcase-node {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 15px;
+  background: rgba(17, 22, 34, 0.9);
+  padding: 14px;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.18);
+
+  transition:
+    transform 350ms cubic-bezier(.22, 1, .36, 1),
+    border-color 300ms ease;
+}
+
+.dm-showcase-node:hover {
+  transform: translateX(6px);
+  border-color: rgba(41, 84, 255, 0.3);
+}
+
+.dm-showcase-accent {
+  border-color: rgba(41, 84, 255, 0.25);
+  box-shadow: 0 0 30px rgba(41, 84, 255, 0.08);
+}
+
+.dm-showcase-success {
+  border-color: rgba(34, 197, 94, 0.18);
+}
+
+.dm-animated-connector {
+  position: relative;
+  width: 1px;
+  height: 38px;
+  margin: 0 auto;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.dm-animated-connector::after {
+  content: "";
+  position: absolute;
+  top: -10px;
+  left: 0;
+  width: 1px;
+  height: 10px;
+  background: #6f91ff;
+  box-shadow: 0 0 12px #2954ff;
+  animation: dmConnector 1.6s linear infinite;
+}
+
+@keyframes dmConnector {
+  from {
+    transform: translateY(0);
+  }
+
+  to {
+    transform: translateY(48px);
+  }
+}
+
+/* =========================================================
+   STEP CARDS
+========================================================= */
+
+.dm-step-card {
+  padding: 28px;
+
+  transition:
+    transform 400ms cubic-bezier(.22, 1, .36, 1),
+    border-color 300ms ease,
+    box-shadow 400ms ease;
+}
+
+.dm-step-card:hover {
+  transform: translateY(-6px);
+  border-color: rgba(41, 84, 255, 0.25);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.2);
+}
+
+/* =========================================================
+   PRICING
+========================================================= */
+
+.dm-pricing-card {
+  position: relative;
+  min-height: 460px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 22px;
+  background: #0d111c;
+  padding: 32px;
+
+  transition:
+    transform 450ms cubic-bezier(.22, 1, .36, 1),
+    border-color 350ms ease,
+    box-shadow 450ms ease;
+}
+
+.dm-pricing-card:hover {
+  transform: translateY(-7px);
+  border-color: rgba(41, 84, 255, 0.22);
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.25);
+}
+
+.dm-pricing-featured {
+  border-color: rgba(41, 84, 255, 0.45);
+  background:
+    linear-gradient(
+      145deg,
+      rgba(41, 84, 255, 0.07),
+      transparent 45%
+    ),
+    #0d111c;
+  box-shadow: 0 25px 70px rgba(41, 84, 255, 0.08);
+}
+
+/* =========================================================
+   WHY
+========================================================= */
+
+.dm-reason-card {
+  padding: 24px;
+
+  transition:
+    transform 350ms cubic-bezier(.22, 1, .36, 1),
+    border-color 300ms ease,
+    background-color 300ms ease;
+}
+
+.dm-reason-card:hover {
+  transform: translateY(-5px);
+  border-color: rgba(41, 84, 255, 0.22);
+  background: #101520;
+}
+
+/* =========================================================
+   FAQ
+========================================================= */
+
+.dm-faq {
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 16px;
+  background: #0d111c;
+  overflow: hidden;
+
+  transition:
+    border-color 250ms ease,
+    background-color 250ms ease;
+}
+
+.dm-faq:hover {
+  border-color: rgba(41, 84, 255, 0.2);
+}
+
+.dm-faq summary {
+  display: flex;
+  cursor: pointer;
+  list-style: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 20px 22px;
+  font-family: "Manrope", sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: white;
+}
+
+.dm-faq summary::-webkit-details-marker {
+  display: none;
+}
+
+.dm-faq summary svg {
+  flex-shrink: 0;
+  transition: transform 250ms ease;
+}
+
+.dm-faq[open] summary svg {
+  transform: rotate(180deg);
+}
+
+.dm-faq p {
+  padding: 0 22px 22px;
+  font-size: 13px;
+  line-height: 1.8;
+  color: #778297;
+}
+
+/* =========================================================
+   FINAL CTA
+========================================================= */
+
+.dm-final-cta {
+  background:
+    radial-gradient(
+      circle at 50% 0%,
+      rgba(255, 255, 255, 0.16),
+      transparent 38%
+    ),
+    linear-gradient(135deg, #2954ff, #1d3dcc 60%, #152c99);
+  box-shadow: 0 35px 100px rgba(41, 84, 255, 0.16);
+}
+
+/* =========================================================
+   FOOTER
+========================================================= */
+
+.dm-social {
+  display: flex;
+  width: 38px;
+  height: 38px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 10px;
+  color: #667187;
+
+  transition:
+    transform 300ms cubic-bezier(.22, 1, .36, 1),
+    color 220ms ease,
+    border-color 220ms ease,
+    background-color 220ms ease;
+}
+
+.dm-social:hover {
+  transform: translateY(-3px);
+  color: #6f91ff;
+  border-color: rgba(41, 84, 255, 0.3);
+  background: rgba(41, 84, 255, 0.06);
+}
+
+.dm-footer-link {
+  transition:
+    color 220ms ease,
+    transform 220ms ease;
+}
+
+.dm-footer-link:hover {
+  color: white;
+}
+
+/* =========================================================
+   MOBILE MENU
+========================================================= */
+
+.mobile-menu {
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(-8px);
+  transition:
+    max-height 350ms cubic-bezier(.22, 1, .36, 1),
+    opacity 250ms ease,
+    transform 350ms cubic-bezier(.22, 1, .36, 1);
+}
+
+.mobile-menu-open {
+  max-height: 420px;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* =========================================================
+   REDUCED MOTION
+========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  .dmloop-page *,
+  .dmloop-page *::before,
+  .dmloop-page *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 768px) {
+  .dm-dashboard {
+    transform: none;
+  }
+
+  .dm-float {
+    animation-duration: 9s;
+  }
+
+  .dm-pricing-card {
+    min-height: auto;
+  }
+}
