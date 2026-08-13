@@ -134,7 +134,7 @@ export default function HelpSupport() {
           <h2 className="text-h1 mb-2">Still have questions?</h2>
           <p className="text-on-surface-variant text-body-md">Email us and we'll get back to you — usually within a day.</p>
         </div>
-        <a href="mailto:support@dmloop.app" className="btn-primary flex items-center gap-2 px-6 py-3.5 whitespace-nowrap">
+        <a href="mailto:infokv26@gmail.com" className="btn-primary flex items-center gap-2 px-6 py-3.5 whitespace-nowrap">
           <Mail size={18} /> Email Our Team
         </a>
       </section>
